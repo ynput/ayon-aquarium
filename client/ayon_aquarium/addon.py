@@ -1,37 +1,43 @@
-import os
+"""Aquarium module."""
+
+import os, sys
 
 from openpype.modules import (
     AYONAddon,
-    ITrayModule,
     IPluginPaths,
+    ITrayAction,
 )
 
 AQUARIUM_ADDON_DIR = os.path.dirname(os.path.abspath(__file__))
+vendorsPath = os.path.join(AQUARIUM_ADDON_DIR, "vendors")
+if vendorsPath not in sys.path:
+    sys.path.append(vendorsPath)
 
+class AquariumAddon(AYONAddon, IPluginPaths, ITrayAction):
+    """Aquarium module class."""
 
-class AquariumAddon(
-    AYONAddon,
-    ITrayModule,
-    IPluginPaths,
-):
+    label = "Aquarium"
     name = "aquarium"
 
     def initialize(self, settings):
-        addon_settings = settings[self.name]
+        aquarium_settings = settings[self.name]
 
-        self._aquarium_url = addon_settings["server_url"]
+        self._url = aquarium_settings["url"].strip()
+        self._domain = aquarium_settings["domain"].strip()
 
-        self._tray_wrapper = None
+        self.enabled = True
+        self._dialog = None
 
     def get_global_environments(self):
         """Aquarium global environments."""
 
         return {
-            "AQUARIUM_SERVER_URL": self._aquarium_url
+            "AQUARIUM_SERVER_URL": self._url,
+            "AQUARIUM_DOMAIN": self._domain
         }
 
     def get_aquarium_url(self):
-        """Resolved ftrack url.
+        """Resolved Aquarium url.
 
         Resolving is trying to fill missing information in url and tried to
         connect to the server.
@@ -41,45 +47,60 @@ class AquariumAddon(
                 reached.
         """
 
-        return self._aquarium_url
+        return self._url
 
-    aquarium_url = property(get_aquarium_url)
-
-    def get_plugin_paths(self):
-        """Ftrack plugin paths."""
-        return {
-            "publish": [
-                os.path.join(AQUARIUM_ADDON_DIR, "plugins", "publish")
-            ]
-        }
-
-    def get_launch_hook_paths(self):
-        """Implementation for applications launch hooks."""
-
-        return os.path.join(AQUARIUM_ADDON_DIR, "launch_hooks")
+    url = property(get_aquarium_url)
 
     def tray_init(self):
-        from .tray_wrap import AquariumTrayWrapper
+        """Tray init."""
 
-        self._tray_wrapper = AquariumTrayWrapper(self)
-
-    def tray_menu(self, parent_menu):
-        return self._tray_wrapper.tray_menu(parent_menu)
+        pass
 
     def tray_start(self):
-        return self._tray_wrapper.validate()
+        """Tray start."""
+        from .credentials import (
+            load_credentials,
+            validate_credentials,
+            set_credentials_envs,
+        )
 
-    def tray_exit(self):
-        self._tray_wrapper.tray_exit()
+        token = load_credentials()
 
-    def set_credentials_to_env(self, api_key):
-        os.environ["AQUARIUM_API_KEY"] = api_key or ""
+        # Check credentials, ask them if needed
+        if validate_credentials(token):
+            set_credentials_envs(token)
+        else:
+            self.show_dialog()
 
-    def get_credentials(self):
-        """Get local Ftrack credentials."""
+    def _get_dialog(self):
+        if self._dialog is None:
+            from .login_dialog import AquariumCredentialsDialog
 
-        from .credentials import get_credentials
+            self._dialog = AquariumCredentialsDialog(self)
 
-        cred = get_credentials(self.ftrack_url)
-        return cred.get("api_key")
+        return self._dialog
 
+    def show_dialog(self):
+        """Show dialog to log-in."""
+
+        # Make sure dialog is created
+        dialog = self._get_dialog()
+
+        # Show dialog
+        dialog.open()
+
+    def on_action_trigger(self):
+        """Implementation of abstract method for `ITrayAction`."""
+        self.show_dialog()
+
+    def get_plugin_paths(self):
+        """Implementation of abstract method for `IPluginPaths`."""
+
+        return {
+            "publish": self.get_publish_plugin_paths(),
+            # The laucher action is not working since AYON conversion
+            # "actions": [os.path.join(AQUARIUM_ADDON_DIR, "plugins", "launcher")],
+        }
+
+    def get_publish_plugin_paths(self, host_name=None):
+        return [os.path.join(AQUARIUM_ADDON_DIR, "plugins", "publish")]

@@ -1,1 +1,3 @@
-__version__ = "1.0.0"
+# -*- coding: utf-8 -*-
+"""Package declaring aquarium addon version."""
+__version__ = "0.0.3"

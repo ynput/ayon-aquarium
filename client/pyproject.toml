@@ -1,2 +1,0 @@
-[tool.poetry.dependencies]
-aquarium-python-api = "^2.0"

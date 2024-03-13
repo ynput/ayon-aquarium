@@ -1,81 +1,148 @@
+"""Aquarium credentials functions."""
+
 import os
+from typing import Tuple, Optional
+from .vendors.aquarium import Aquarium
 
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
+from openpype.lib.local_settings import OpenPypeSecureRegistry
+from openpype.lib import emit_event
 
+def me(
+    token: str, url: Optional[str] = None, domain: Optional[str] = None
+):
+    """Validate credentials by trying to connect to Aquarium host URL.
 
-from openpype.lib import OpenPypeSecureRegistry
+    Args:
+        token (str): Aquarium user token
+        url (str, optional): Aquarium host URL. Defaults to None.
+        domain (str, optional): Aquarium domain. Defaults to None.
 
-API_KEY_KEY = "api_key"
+    Returns:
+        Aquarium.User: Aquarium user object
+    """
 
+    if url is None:
+        url = os.environ.get("AQUARIUM_SERVER_URL")
 
-def get_aquarium_hostname(server_url=None):
-    if not server_url:
-        server_url = os.environ.get("AQUARIUM_SERVER_URL")
+    if domain is None:
+        domain = os.environ.get("AQUARIUM_DOMAIN")
 
-    if not server_url:
-        return None
-
-    if "//" not in server_url:
-        server_url = "//" + server_url
-
-    return urlparse(server_url).hostname
-
-
-def _get_aquarium_secure_key(hostname, key):
-    """Secure item key for entered hostname."""
-    return "/".join(("aquarium", hostname, key))
-
-
-def get_credentials(server_url=None):
-    output = {
-        API_KEY_KEY: None
-    }
-    hostname = get_aquarium_hostname(server_url)
-    if not hostname:
-        return output
-
-    api_key_name = _get_aquarium_secure_key(hostname, API_KEY_KEY)
-    api_key_registry = OpenPypeSecureRegistry(api_key_name)
-    output[API_KEY_KEY] = api_key_registry.get_item(API_KEY_KEY, None)
-
-    return output
+    # Authenticate
+    aq = Aquarium(api_url=url, domain=domain, token=token)
+    return aq.me()
 
 
-def save_credentials(api_key, server_url=None):
-    hostname = get_aquarium_hostname(server_url)
-    api_key_name = _get_aquarium_secure_key(hostname, API_KEY_KEY)
+def validate_credentials(
+    token: str, url: Optional[str] = None, domain: Optional[str] = None
+) -> bool:
+    """Validate credentials by trying to connect to Aquarium host URL.
 
-    # Clear credentials
-    clear_credentials(server_url)
-    api_key_registry = OpenPypeSecureRegistry(api_key_name)
-    api_key_registry.set_item(API_KEY_KEY, api_key)
+    Args:
+        token (str): Aquarium user token
+        url (str, optional): Aquarium host URL. Defaults to None.
+        domain (str, optional): Aquarium domain. Defaults to None.
 
+    Returns:
+        bool: Are credentials valid?
+    """
 
-def clear_credentials(ftrack_server=None):
-    hostname = get_aquarium_hostname(ftrack_server)
-    api_key_name = _get_aquarium_secure_key(hostname, API_KEY_KEY)
-    api_key_registry = OpenPypeSecureRegistry(api_key_name)
-
-    current_api_key = api_key_registry.get_item(API_KEY_KEY, None)
-    if current_api_key is not None:
-        api_key_registry.delete_item(API_KEY_KEY)
-
-
-def check_credentials(api_key, server_url=None):
-    if not server_url:
-        server_url = os.environ.get("AQUARIUM_SERVER_URL")
-
-    if not server_url or not api_key:
+    try:
+        me(token, url, domain)
+    except:
         return False
 
-    user_exists = False
-    try:
-        # TODO implement validation of credentials
-        pass
+    return True
 
-    except Exception:
-        pass
-    return user_exists
+def signin(email: str, password: str, url: Optional[str] = None, domain: Optional[str] = None) -> str:
+    """Sign in to Aquarium and get user token.
+
+    Args:
+        email (str): Aquarium user email.
+        password (str): Aquarium user password.
+        url (str, optional): Aquarium host URL. Defaults to None.
+        domain (str, optional): Aquarium domain. Defaults to None.
+
+    Returns:
+        str: Aquarium user token
+    """
+    if url is None:
+        url = os.environ.get("AQUARIUM_SERVER_URL")
+
+    if domain is None:
+        domain = os.environ.get("AQUARIUM_DOMAIN")
+
+    # Authenticate
+    aq = Aquarium(api_url=url, domain=domain)
+
+    aq.signin(email, password)
+
+    return aq.token
+
+def validate_host(url: str, domain: Optional[str] = None) -> bool:
+    """Validate credentials by trying to connect to Aquarium host URL.
+
+    Args:
+        url (str, optional): Aquarium host URL.
+        domain (str, optional): Aquarium domain.
+
+    Returns:
+        bool: Is host valid?
+    """
+    # Connect to server
+
+    aq = Aquarium(api_url=url, domain=domain)
+
+    # Test host
+    if aq.ping():
+        return True
+    else:
+        raise Exception(
+            "Enable to ping Aquarium server {0}".format(aquarium_url))
+
+
+def clear_credentials():
+    """Clear credentials in Secure Registry."""
+    (token) = load_credentials()
+    if token is None:
+        return
+
+    # Get user registry
+    user_registry = OpenPypeSecureRegistry("aquarium_user")
+
+    # Set local settings
+    if token is not None:
+        user_registry.delete_item("token")
+
+
+def save_credentials(token: str):
+    """Save credentials in Secure Registry.
+
+    Args:
+        token (str): Aquarium user token
+    """
+    # Get user registry
+    user_registry = OpenPypeSecureRegistry("aquarium_user")
+
+    # Set local settings
+    user_registry.set_item("token", token)
+
+
+def load_credentials() -> Tuple[str, str]:
+    """Load registered credentials.
+
+    Returns:
+        Tuple[str, str]: (Token)
+    """
+    # Get user registry
+    user_registry = OpenPypeSecureRegistry("aquarium_user")
+
+    return user_registry.get_item("token", None)
+
+
+def set_credentials_envs(token: str):
+    """Set environment variables with Aquarium token.
+
+    Args:
+        token (str): Aquarium user token
+    """
+    os.environ["AQUARIUM_TOKEN"] = token

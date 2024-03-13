@@ -5,18 +5,18 @@ from qtpy import QtCore, QtGui, QtWidgets
 from openpype import style, resources
 from openpype.tools.utils import PlaceholderLineEdit
 
-from .credentials import check_credentials, save_credentials
+from .credentials import signin, me, load_credentials, save_credentials, clear_credentials, set_credentials_envs
 
 
-class CredentialsDialog(QtWidgets.QDialog):
-    SIZE_W = 300
+class AquariumCredentialsDialog(QtWidgets.QDialog):
+    SIZE_W = 400
     SIZE_H = 230
 
     login_changed = QtCore.Signal()
     logout_signal = QtCore.Signal()
 
     def __init__(self, module, parent=None):
-        super(CredentialsDialog, self).__init__(parent)
+        super(AquariumCredentialsDialog, self).__init__(parent)
 
         self.setWindowTitle("AYON - Aquarium Login")
 
@@ -36,32 +36,54 @@ class CredentialsDialog(QtWidgets.QDialog):
         # --- Inputs ---
         inputs_widget = QtWidgets.QWidget(self)
 
-        username_label = QtWidgets.QLabel("Username:", inputs_widget)
-        password_label = QtWidgets.QLabel("Password:", inputs_widget)
+        email_label = QtWidgets.QLabel("User email:", inputs_widget)
+        password_label = QtWidgets.QLabel("User password:", inputs_widget)
+        server_url_label = QtWidgets.QLabel("Aquarium URL:", inputs_widget)
 
         server_label = QtWidgets.QLabel(inputs_widget)
-        server_label.setTextInteractionFlags(
-            QtCore.Qt.TextBrowserInteraction
-        )
-        server_label.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
+        # server_url_label.setTextInteractionFlags(
+        #     QtCore.Qt.TextBrowserInteraction
+        # )
+        # server_url_label.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
 
-        username_input = QtWidgets.QLineEdit(inputs_widget)
-        username_input.setPlaceholderText("user.name@example.com")
+        email_input = QtWidgets.QLineEdit(inputs_widget)
+        email_input.setPlaceholderText("user.name@example.com")
 
         password_input = PlaceholderLineEdit(inputs_widget)
-        password_input.setPlaceholderText("***secure***")
+        password_input.setPlaceholderText("Your password")
         password_input.setEchoMode(PlaceholderLineEdit.Password)
 
-        input_layout = QtWidgets.QFormLayout(inputs_widget)
-        input_layout.setContentsMargins(10, 15, 10, 5)
-        input_layout.addRow("Aquarium URL:", server_label)
-        input_layout.addRow(username_label, username_input)
-        input_layout.addRow(password_label, password_input)
+        remember_checkbox = QtWidgets.QCheckBox("Remember", inputs_widget)
+        remember_checkbox.setObjectName("RememberCheckbox")
+        remember_checkbox.setChecked(False)
+
+        server_url_spacer = QtWidgets.QSpacerItem(5, 5)
+
+        inputs_layout = QtWidgets.QGridLayout(inputs_widget)
+        inputs_layout.setContentsMargins(0, 0, 0, 0)
+        inputs_layout.addWidget(server_url_label, 0, 0, QtCore.Qt.AlignRight)
+        inputs_layout.addWidget(server_label, 0, 1)
+        inputs_layout.addItem(server_url_spacer, 1, 0, 1, 2)
+        inputs_layout.addWidget(email_label, 2, 0, QtCore.Qt.AlignRight)
+        inputs_layout.addWidget(email_input, 2, 1)
+        inputs_layout.addWidget(password_label, 3, 0, QtCore.Qt.AlignRight)
+        inputs_layout.addWidget(password_input, 3, 1)
+        inputs_layout.addWidget(remember_checkbox, 4, 1)
+        inputs_layout.setColumnStretch(0, 0)
+        inputs_layout.setColumnStretch(1, 1)
+
+        # input_layout = QtWidgets.QFormLayout(inputs_widget)
+        # # input_layout.setContentsMargins(10, 15, 10, 5)
+        # input_layout.addRow("Aquarium URL:", server_label)
+        # input_layout.addRow(email_label, email_input)
+        # input_layout.addRow(password_label, password_input)
+        # input_layout.addRow(None, remember_checkbox)
 
         # --- Error label for user ---
         messages_wrapper = QtWidgets.QWidget(self)
         user_message_label = QtWidgets.QLabel("", messages_wrapper)
         user_message_label.setWordWrap(True)
+        user_message_label.setStyleSheet("color: #ff6b6b;")
 
         messages_layout = QtWidgets.QVBoxLayout(messages_wrapper)
         messages_layout.setContentsMargins(10, 5, 10, 5)
@@ -72,7 +94,7 @@ class CredentialsDialog(QtWidgets.QDialog):
 
         btn_login = QtWidgets.QPushButton("Login", btns_widget)
         btn_login.setToolTip(
-            "Set Username and API Key with entered values"
+            "Signin to Aquarium with the provided credentials."
         )
         btn_login.clicked.connect(self._on_login_clicked)
 
@@ -101,13 +123,25 @@ class CredentialsDialog(QtWidgets.QDialog):
 
         self._server_label = server_label
 
-        self._username_input = username_input
+        self._email_input = email_input
         self._password_input = password_input
+        self._remember_checkbox = remember_checkbox
 
         self._user_message_label = user_message_label
 
         self._btn_login = btn_login
         self._btn_logout = btn_logout
+
+        token = load_credentials()
+        if token:
+            self._remember_checkbox.setChecked(True)
+            try:
+                user = me(token)
+                self._email_input.setText(user.data.email)
+                self._password_input.setPlaceholderText("********")
+                self._is_logged = True
+            except:
+                self._is_logged = False
 
         self._update_widget_states()
 
@@ -128,24 +162,31 @@ class CredentialsDialog(QtWidgets.QDialog):
 
         self._update_widget_states()
 
-        self._username_input.setReadOnly(is_logged)
-        self.api_input.setReadOnly(is_logged)
+        self._email_input.setReadOnly(is_logged)
+        self._password_input.setReadOnly(is_logged)
 
-        self.btn_logout.setVisible(is_logged)
+        self._btn_logout.setVisible(is_logged)
 
-    def login_with_credentials(self, username, password):
-        api_key = check_credentials(username, password)
-        if api_key:
-            save_credentials(api_key, False)
-            self._module.set_credentials_to_env(api_key)
-            self._set_credentials(api_key)
-            self.login_changed.emit()
-            return
-        self._mark_invalid_input(self._username_input)
-        self._mark_invalid_input(self.api_input)
-        self._set_error(
-            "We're unable to sign in to Ftrack with these credentials"
-        )
+    def login_with_credentials(self, email, password):
+        try:
+            token = signin(email, password)
+            if token:
+                remember = self._remember_checkbox.isChecked()
+                if (remember):
+                    save_credentials(token)
+                else:
+                    clear_credentials()
+                set_credentials_envs(token)
+                # self._set_credentials(api_key)
+                self.login_changed.emit()
+                return
+        except Exception as err:
+            self._mark_invalid_input(self._email_input)
+            self._mark_invalid_input(self._password_input)
+            self._set_error(
+                str(err) or "We're unable to sign in to Aquarium with these credentials"
+            )
+
 
     def _set_error(self, msg=None):
         self._user_message_label.setText(msg or "")
@@ -154,24 +195,26 @@ class CredentialsDialog(QtWidgets.QDialog):
         input_widget.setStyleSheet("")
 
     def _mark_invalid_input(self, input_widget):
-        input_widget.setStyleSheet("border: 1px solid red;")
+        input_widget.setStyleSheet("border: 1px solid #ff6b6b;")
 
     def _on_login(self):
         self.set_is_logged(True)
         self._close_widget()
 
     def _on_login_clicked(self):
-        username = self._username_input.text()
+        email = self._email_input.text()
         password = self._password_input.text()
-        if username == "":
-            self._mark_invalid_input(self._username_input)
-            self._set_error("You didn't enter Username")
+        if email == "":
+            self._mark_invalid_input(self._email_input)
+            self._set_error("You didn't enter Email")
             return
 
-        self.login_with_credentials(username, password)
+        self.login_with_credentials(email, password)
 
     def _on_logout_clicked(self):
-        self._username_input.setText("")
+        self._email_input.setText("")
+        self._password_input.setText("")
+        self._password_input.setPlaceholderText("Your password")
         self.set_is_logged(False)
         self.logout_signal.emit()
 
@@ -180,8 +223,8 @@ class CredentialsDialog(QtWidgets.QDialog):
         self._set_error()
 
         self._unmark_input(self._server_label)
-        self._unmark_input(self._username_input)
-        self._unmark_input(self.api_input)
+        self._unmark_input(self._email_input)
+        self._unmark_input(self._password_input)
 
         if is_logged is not None:
             self.set_is_logged(is_logged)
@@ -194,22 +237,22 @@ class CredentialsDialog(QtWidgets.QDialog):
             )
             return None
 
-        try:
-            # Check if url can be reached
-            result = requests.get(server_url)
-        except requests.exceptions.RequestException:
-            self._set_error(
-                "Specified URL could not be reached."
-            )
-            return None
+        # try:
+        #     # Check if url can be reached
+        #     result = requests.get(server_url)
+        # except requests.exceptions.RequestException:
+        #     self._set_error(
+        #         "Specified URL could not be reached."
+        #     )
+        #     return None
 
-        # Validate if server is Aquarium server
-        # TODO implement the validation
-        if result.status_code != 200:
-            self._set_error(
-                "Specified URL does not lead to a valid Ftrack server."
-            )
-            return None
+        # # Validate if server is Aquarium server
+        # # TODO implement the validation
+        # if result.status_code != 200:
+        #     self._set_error(
+        #         "Specified URL does not lead to a valid Aquarium server."
+        #     )
+        #     return None
         return server_url
 
     def _update_url(self):
@@ -217,25 +260,39 @@ class CredentialsDialog(QtWidgets.QDialog):
 
         self._validated_url = validated_url
 
-        self._server_label.setText(validated_url or "< Not set >")
+        self._server_label.setText(validated_url or "Set server url in Studio Settings")
 
         self._update_widget_states()
 
     def _update_widget_states(self):
-        # TODO finish implementation - now it is random changing of states :)
         url_is_valid = bool(self._validated_url)
 
-        self._username_input.setVisible(not url_is_valid)
-        self._password_input.setVisible(not url_is_valid)
-        self._btn_login.setVisible(not url_is_valid or not self._is_logged)
-        self._btn_logout.setVisible(not url_is_valid or self._is_logged)
+        if not url_is_valid:
+            self._server_label.setStyleSheet("color: #ff6b6b;")
+        else:
+            self._server_label.setStyleSheet("")
 
-        self._username_input.setReadOnly(self._is_logged)
-        self._username_input.setEnabled(not self._is_logged)
-        self._password_input.setReadOnly(self._is_logged)
+        # self._email_input.setVisible(url_is_valid)
+        self._email_input.setReadOnly(not url_is_valid or self._is_logged)
+        self._email_input.setEnabled(not self._is_logged)
+
+        # self._password_input.setVisible(url_is_valid)
+        self._password_input.setReadOnly(not url_is_valid or self._is_logged)
         self._password_input.setEnabled(not self._is_logged)
 
-        self._username_input.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
+        self._remember_checkbox.setEnabled(url_is_valid and not self._is_logged)
+
+        if self._is_logged:
+            self._unmark_input(self._email_input)
+            self._unmark_input(self._password_input)
+
+        self._btn_login.setVisible(not self._is_logged)
+        self._btn_login.setEnabled(url_is_valid)
+
+        self._btn_logout.setVisible(self._is_logged)
+        self._btn_logout.setEnabled(url_is_valid)
+
+        self._email_input.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
         self._password_input.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
 
     def _close_widget(self):
