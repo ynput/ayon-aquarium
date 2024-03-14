@@ -6,7 +6,7 @@ import time
 from ayon_server.lib.postgres import Postgres
 from ayon_server.entities import UserEntity, FolderEntity, TaskEntity
 from ayon_server.events import dispatch_event, update_event
-from ayon_server.types import PROJECT_NAME_REGEX, Field, OPModel
+from ayon_server.types import Field, OPModel
 
 from .anatomy import get_ayon_project
 from .utils import get_folder_by_aquarium_key, get_task_by_aquarium_key
@@ -89,14 +89,19 @@ async def sync_project(addon: "AquariumAddon", project_name: str, user: "UserEnt
         logging.error(f"Can't sync project {project_name}. The project is not paired with an Aquarium project.")
         return "aquariumProjectKey not found"
 
+    logging.info(f"Syncing project {project_name}...")
+
     items = request.items
     sync_order = ['Library', 'Asset', 'Episode', 'Sequence', 'Shot']
     for itemType in sync_order:
+        # logging.debug(f"Processing {itemType} items...")
         if itemType in items:
             for item in items[itemType]:
+                # logging.debug(f"  - Processing {item['folder']['name']}...")
                 await sync_folder(addon, project_name, user, SyncFolderRequest(folder=item['folder'], path=item['path']))
                 if "tasks" in item:
                     for task in item['tasks']:
+                        # logging.debug(f"    - Processing {task['task']['name']}...")
                         await sync_task(addon, project_name, user, SyncTaskRequest(task=task['task'], path=task['path']))
 
     logging.info(f"Project {project_name} synced")
@@ -145,15 +150,23 @@ async def sync_folder(addon: "AquariumAddon", project_name: str, user: "UserEnti
                     folderEntity.own_attrib.append(key)
                 saveRequired = True
     else:
-        folderEntity = FolderEntity(
-            project_name=project_name,
-            payload=folder,
-        )
-        saveRequired = True
+        try:
+            folderEntity = FolderEntity(
+                project_name=project_name,
+                payload=folder,
+            )
+            saveRequired = True
+        except Exception as e:
+            logging.error(f"Error while creating folder {folder['name']} #{folder['data']['aquariumKey']}: {e}")
+            return ''
 
-    if saveRequired:
-        await folderEntity.save()
-    return folderEntity.id
+    try:
+        if saveRequired:
+            await folderEntity.save()
+        return folderEntity.id
+    except Exception as e:
+        logging.error(f"Error while saving folder {folder['name']} #{folder['data']['aquariumKey']}: {e}")
+        return ''
 
 
 class SyncTaskRequest(OPModel):
@@ -182,7 +195,7 @@ async def sync_task(addon: "AquariumAddon", project_name: str, user: "UserEntity
     project = await get_ayon_project(project_name)
     if not 'taskType' in task:
         for taskType in project.task_types:
-            if taskType['name'] == task['name']:
+            if taskType['name'].lower() == task['label'].lower() or taskType['name'].lower() == task['name'].lower():
                 task['taskType'] = taskType['name']
 
     if not 'status' in task or task['status'] is None:
@@ -215,12 +228,21 @@ async def sync_task(addon: "AquariumAddon", project_name: str, user: "UserEntity
                     taskEntity.own_attrib.append(key)
                 saveRequired = True
     else:
-        taskEntity = TaskEntity(
-            project_name=project_name,
-            payload=task,
-        )
-        saveRequired = True
+        try:
+            taskEntity = TaskEntity(
+                project_name=project_name,
+                payload=task,
+            )
+            saveRequired = True
+        except Exception as e:
+            logging.error(f"Error while creating task {task['name']} #{task['data']['aquariumKey']}: {e}")
+            return ''
 
-    if saveRequired:
-        await taskEntity.save()
-    return taskEntity.id
+    try:
+        if saveRequired:
+            await taskEntity.save()
+        return taskEntity.id
+
+    except Exception as e:
+        logging.error(f"Error while saving task {task['name']} #{task['data']['aquariumKey']}: {e}")
+        return ''
