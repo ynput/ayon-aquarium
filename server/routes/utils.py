@@ -25,7 +25,7 @@ def remove_accents(input_str: str) -> str:
 
 def create_short_name(name: str) -> str:
     """Create a short name from a string by removing vowels abbreviating string"""
-    code = name.lower()
+    code = slugify(name).lower()
 
     if "_" in code:
         subwords = code.split("_")
@@ -142,6 +142,7 @@ async def parse_task_types(addon: "AquariumAddon", templateTasks: List[Dict[str,
 
     {
         name:
+        original_name:
         shortName:
         icon:
     }
@@ -153,28 +154,27 @@ async def parse_task_types(addon: "AquariumAddon", templateTasks: List[Dict[str,
         if any(ayonTask.name == aqTask["name"] for ayonTask in result):
             continue
 
-        short_name = ''
-        icon = ''
+        name = aqTask["name"]
+        short_name = aqTask.get("shortName", None)
+        icon = aqTask.get("icon", "task_alt")
 
         settings = await addon.get_aquarium_settings()
         found = False
-        for task in settings.sync.default.tasks:
-            if task.name.lower() == aqTask["name"].lower():
+        for taskType in settings.sync.default.tasks:
+            if taskType.name.lower() == name.lower():
                 found = True
-                short_name = task.short_name
-                icon = task.icon
+                short_name = taskType.short_name
+                icon = taskType.icon
 
         if not found:
-            short_name = aqTask.get("shortName")
             if not short_name:
-                name_slug = remove_accents(aqTask["name"].lower())
+                name_slug = remove_accents(slugify(aqTask["name"].lower()))
                 short_name = create_short_name(name_slug)
-            icon = "task_alt"
 
         result.append(
             TaskType(
                 original_name=aqTask["name"],
-                name=aqTask["name"],
+                name=name,
                 shortName=short_name,
                 icon=icon,
             )

@@ -31,7 +31,7 @@ def updated(processor: "AquariumProcessor", event):
     )
 
 def sync(processor: "AquariumProcessor", aquariumProjectKey: str):
-    log.info(f"Full sync project #{aquariumProjectKey}")
+    log.info(f"Gathering data for sync project #{aquariumProjectKey}...")
     project_name = processor.get_paired_ayon_project(aquariumProjectKey)
     if not project_name:
         return  # do nothing as aquarium and ayon project are not paired
@@ -48,6 +48,7 @@ def sync(processor: "AquariumProcessor", aquariumProjectKey: str):
         },
         "taskView": {
             "task": "item",
+            "assignees": "# -($Assigned)> $User SORT null VIEW item.data.email",
             "path": "REVERSE(APPEND(mainPath, SHIFT(path.vertices)))" # REVERSE to match event path order and SHIFT to avoid item deduplication
         },
         "view": {
@@ -56,20 +57,30 @@ def sync(processor: "AquariumProcessor", aquariumProjectKey: str):
         }
     }
     collections: list = processor._AQS.aq.project(aquariumProjectKey).traverse(meshql=query, aliases=aliases)
+    log.info(f"{len(collections)} items type found for project #{aquariumProjectKey}.")
 
     items = {}
     cast = processor._AQS.aq.cast
     for itemType in collections:
+        log.debug(f"Processing {itemType['type']} items...")
         items[itemType["type"]] = []
         for item in itemType["items"]:
+            log.debug(f"  - Processing {item['folder']['data']['name']}...")
             items[itemType["type"]].append({
                 "folder": ayonise_folder(cast(item['folder'])),
-                "tasks": [dict(task=ayonise_task(cast(task["task"])), path=task["path"]) for task in item['tasks']],
+                "tasks": [dict(task=ayonise_task(cast(task["task"]), task['assignees']), path=task["path"]) for task in item['tasks']],
                 "path": item['path']
             })
 
-    ayon_api.post(
+    res = ayon_api.post(
         f"{processor.entrypoint}/projects/{project_name}/sync/all",
         items=items
     )
+
+    try:
+        res.raise_for_status()
+        log.info(f"Sync data processed and submitted for project #{aquariumProjectKey}.")
+    except Exception as e:
+        log.error(f"Error while syncing project {aquariumProjectKey} to Ayon: {e}")
+        return
 

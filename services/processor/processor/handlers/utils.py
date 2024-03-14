@@ -1,6 +1,8 @@
 """ utils shared between fullsync.py and update_from_aquarium.py """
 from typing import TYPE_CHECKING
+import unicodedata
 import logging
+from nxtools import slugify
 
 import ayon_api
 
@@ -8,17 +10,29 @@ if TYPE_CHECKING:
     from ..processor import AquariumProcessor
 
 log = logging.getLogger(__name__)
+ayonUsers = None  # Declare ayonUsers as a global variable
+
+def unaccent(input_str: str) -> str:
+    """Remove accents from a string"""
+    nfkd_form = unicodedata.normalize("NFKD", input_str)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
 
 def get_ayon_users():
     """Create a map of Ayon users name by their email address."""
-    return {
-        user["attrib"]["email"]: user["name"] for user in ayon_api.get_users()
-    }
+    global ayonUsers  # Use the global variable ayonUsers
+
+    if ayonUsers is None:
+        ayonUsers = {
+            user["attrib"]["email"]: user["name"] for user in ayon_api.get_users()
+        }
+
+    return ayonUsers
 
 def ayonise_folder(aqItem) -> dict[str, str]:
     """Convert an Aquarium item to an Ayon folder entity structure."""
     ayonised = {
-        "name": aqItem.data.name,
+        "name": slugify(aqItem.data.name, separator="_"),
         "label": aqItem.data.name,
         "folderType": aqItem.type,
         "data": {
@@ -62,11 +76,11 @@ def sync_folder(processor: "AquariumProcessor", event):
     except Exception as e:
         log.error(f"Error while syncing {aqItem.type} {aqItem._key}: {e}")
 
-def ayonise_task(aqTask) -> dict[str, str]:
+def ayonise_task(aqTask, aqUserEmails) -> dict[str, str]:
     """Convert an Aquarium task to an Ayon task entity structure."""
 
     ayonised = {
-        "name": aqTask.data.name,
+        "name": slugify(aqTask.data.name, separator="_"),
         "label": aqTask.data.name,
         "data": {
             "aquariumKey": aqTask._key
@@ -85,7 +99,6 @@ def ayonise_task(aqTask) -> dict[str, str]:
         ayonised['attrib']['description'] = aqTask.data.description
 
     ayon_users = get_ayon_users()
-    aqUserEmails = aqTask.traverse(meshql="# -($Assigned)> $User VIEW item.data.email")
     for aqUserEmail in aqUserEmails:
         if aqUserEmail in ayon_users:
             ayonised['assignees'].append(ayon_users[aqUserEmail])
@@ -103,7 +116,9 @@ def sync_task(processor: "AquariumProcessor", event):
     if not project_name:
         return  # do nothing as aquarium and ayon project are not paired
 
-    task = ayonise_task(aqTask)
+    aqUserEmails = aqTask.traverse(meshql="# -($Assigned)> $User VIEW item.data.email")
+    task = ayonise_task(aqTask, aqUserEmails)
+
     response = ayon_api.post(
         f"{processor.entrypoint}/projects/{project_name}/sync/task",
         task=task,
