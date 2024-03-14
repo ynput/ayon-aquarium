@@ -103,7 +103,7 @@ class AquariumProcessor():
 
             self.set_job_processing(job)
 
-            self.process_event(rawEvent)
+            self.process_event(rawEvent, job)
 
             if job is not None:
                 self.set_job_finished(job)
@@ -112,7 +112,7 @@ class AquariumProcessor():
                 if (time.time() - started) > duration:
                     break
 
-    def process_event(self, rawEvent: dict):
+    def process_event(self, rawEvent: dict, job):
         ayonTopic = rawEvent["topic"]
         log.info(f"Processing event: {ayonTopic}")
 
@@ -123,7 +123,7 @@ class AquariumProcessor():
         # For example an updated event only sync updated data or all data ?
         # TODO: Users are not synced yet. Need to be checked with users before.
         if ayonTopic == 'aquarium.sync_project':
-            projects.sync(self, rawEvent["payload"]['aquariumProjectKey'])
+            projects.sync(self, rawEvent["payload"]['aquariumProjectKey'], job.get('dependsOn', ''))
         elif ayonTopic == 'aquarium.leech':
             event = self._AQS.aq.event(rawEvent["payload"])
             if event.topic == 'item.updated.Project':

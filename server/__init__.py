@@ -25,6 +25,8 @@ from .routes.anatomy import (
     get_aquarium_project_anatomy, ProjectAttribModel
 )
 
+from .routes.events import get_event
+
 
 from .vendors.aquarium import Aquarium, DEFAULT_STATUSES
 
@@ -70,6 +72,7 @@ class AquariumAddon(BaseServerAddon):
         self.add_endpoint("/projects/{project_name}/sync/folder", self.POST_projects_sync_folder, method="POST")
         self.add_endpoint("/projects/{project_name}/sync/task", self.POST_projects_sync_task, method="POST")
         self.add_endpoint("/projects/{project_name}/anatomy/attributes", self.GET_anatomy_attributes, method="GET")
+        self.add_endpoint("/events/{event_id}", self.GET_event, method="GET")
 
         logging.info("Aquarium addon initialized.")
 
@@ -94,12 +97,11 @@ class AquariumAddon(BaseServerAddon):
         return EmptyResponse(status_code=201)
 
     # POST /projects/{project_name}/sync
-    async def POST_projects_sync(self, user: CurrentUser, project_name: ProjectName) -> EmptyResponse:
+    async def POST_projects_sync(self, user: CurrentUser, project_name: ProjectName) -> str:
         if not user.is_manager:
             raise ForbiddenException("Only managers can sync Aquarium projects")
 
-        await trigger_sync_project(self, project_name, user)
-        return EmptyResponse(status_code=201)
+        return await trigger_sync_project(self, project_name, user)
 
     # POST /projects/{project_name}/sync/all
     async def POST_projects_sync_all(self, user: CurrentUser, project_name: ProjectName, request: SyncProjectRequest) -> str:
@@ -118,6 +120,13 @@ class AquariumAddon(BaseServerAddon):
         await self.connect_aquarium()
         anatomy = await get_aquarium_project_anatomy(self, project_name)
         return anatomy.attributes
+
+    # GET /events/{event_id}
+    async def GET_event(self, user: CurrentUser, event_id: str) -> dict:
+        if not user.is_manager:
+            raise ForbiddenException("Only managers can get event details")
+
+        return await get_event(self, user, event_id)
 
 
     async def setup(self):

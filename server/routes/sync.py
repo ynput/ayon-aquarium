@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING
 from nxtools import logging
+import asyncio
 import hashlib
 import time
+
 
 from ayon_server.lib.postgres import Postgres
 from ayon_server.entities import UserEntity, FolderEntity, TaskEntity
@@ -9,18 +11,19 @@ from ayon_server.events import dispatch_event, update_event
 from ayon_server.types import Field, OPModel
 
 from .anatomy import get_ayon_project
-from .utils import get_folder_by_aquarium_key, get_task_by_aquarium_key
+from .utils import get_folder_by_aquarium_key, get_task_by_aquarium_key, get_event_by_id
 
 if TYPE_CHECKING:
     from .. import AquariumAddon
 
-async def trigger_sync_project(addon: "AquariumAddon", project_name: str, user: "UserEntity", aquarium_project_key: str | None = None):
+syncTopic = "aquarium.sync_project"
+
+async def trigger_sync_project(addon: "AquariumAddon", project_name: str, user: "UserEntity", aquarium_project_key: str | None = None) -> str:
     """
         Create an event 'aquarium.sync_project' to sync a project from Aquarium to Ayon.
         The event will be processed by the processor service.
     """
 
-    topic = "aquarium.sync_project"
     if aquarium_project_key is None:
         async for res in Postgres.iterate(
             "SELECT data->>'aquariumProjectKey' FROM projects WHERE name = $1",
@@ -40,10 +43,10 @@ async def trigger_sync_project(addon: "AquariumAddon", project_name: str, user: 
 
     existingEvent = await Postgres.fetch(query, hash)
     if existingEvent:
-        logging.info(f"Event {topic} already exists and it's pending. Restarting it.")
-        recordId = existingEvent[0][0]
+        logging.info(f"Event {syncTopic} already exists and it's pending. Restarting it.")
+        eventId = existingEvent[0][0]
         await update_event(
-            recordId,
+            eventId,
             description="Sync request from Aquarium",
             project=project_name,
             user=user.name,
@@ -58,12 +61,13 @@ async def trigger_sync_project(addon: "AquariumAddon", project_name: str, user: 
             WHERE topic = $1
             AND depends_on = $2
             """,
-            topic,
-            recordId,
+            syncTopic,
+            eventId,
         )
+        return eventId
     else:
-        await dispatch_event(
-            topic,
+        eventId = await dispatch_event(
+            syncTopic,
             hash=hash,
             description="Sync project from Aquarium to Ayon",
             project=project_name,
@@ -72,14 +76,25 @@ async def trigger_sync_project(addon: "AquariumAddon", project_name: str, user: 
                 "aquariumProjectKey": aquarium_project_key,
             },
         )
+        return eventId
+
 
 class SyncProjectRequest(OPModel):
+    eventId: str = Field(..., title="Event ID")
     items: dict = Field(..., title="Aquarium items, regrouped by type")
 
 async def sync_project(addon: "AquariumAddon", project_name: str, user: "UserEntity", request: "SyncProjectRequest") -> str:
     """
         Sync project's items from Aquarium to Ayon.
     """
+
+    eventId = request.eventId
+    event = await get_event_by_id(eventId)
+    def updateProgression(itemType: str, progression: float):
+        event['summary'][itemType]['progression'] = round(progression, 2)
+        asyncio.create_task(update_event(eventId, summary=event['summary']))
+
+
     project = await get_ayon_project(project_name)
     if project is None:
         logging.error(f"Can't sync project {project_name}. The project is not found on Ayon database.")
@@ -103,6 +118,7 @@ async def sync_project(addon: "AquariumAddon", project_name: str, user: "UserEnt
                     for task in item['tasks']:
                         # logging.debug(f"    - Processing {task['task']['name']}...")
                         await sync_task(addon, project_name, user, SyncTaskRequest(task=task['task'], path=task['path']))
+                updateProgression(itemType, (items[itemType].index(item) + 1) / len(items[itemType]))
 
     logging.info(f"Project {project_name} synced")
     return project.name

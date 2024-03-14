@@ -49,6 +49,13 @@ def create_name_and_label(aquarium_name: str) -> dict[str, str]:
     return {"name": name_slug, "label": aquarium_name}
 
 # DATABASE UTILS
+async def get_event_by_id(event_id: str) -> dict[str, Any]:
+    """Get an event by its id"""
+    query = "SELECT * FROM events WHERE id = $1"
+    res = await Postgres.fetch(query, event_id)
+    return res[0]
+
+
 async def ensure_ayon_project_not_exists(project_name: str, project_code: str):
     async for res in Postgres.iterate(
         "SELECT name FROM projects WHERE name = $1 OR code = $2",

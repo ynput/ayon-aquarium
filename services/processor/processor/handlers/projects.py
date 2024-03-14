@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 import ayon_api
 import logging
+from functools import reduce
 
 from .utils import ayonise_folder, ayonise_task
 
@@ -30,7 +31,7 @@ def updated(processor: "AquariumProcessor", event):
         json=payload
     )
 
-def sync(processor: "AquariumProcessor", aquariumProjectKey: str):
+def sync(processor: "AquariumProcessor", aquariumProjectKey: str, eventId: str):
     log.info(f"Gathering data for sync project #{aquariumProjectKey}...")
     project_name = processor.get_paired_ayon_project(aquariumProjectKey)
     if not project_name:
@@ -60,6 +61,7 @@ def sync(processor: "AquariumProcessor", aquariumProjectKey: str):
     log.info(f"{len(collections)} items type found for project #{aquariumProjectKey}.")
 
     items = {}
+    eventSummary = {}
     cast = processor._AQS.aq.cast
     for itemType in collections:
         log.debug(f"Processing {itemType['type']} items...")
@@ -72,9 +74,23 @@ def sync(processor: "AquariumProcessor", aquariumProjectKey: str):
                 "path": item['path']
             })
 
+            # items[itemType["type"]] = [{folder, tasks: []}]
+        eventSummary[itemType["type"]] = {
+            "count": reduce(lambda count, item: count + 1 + len(item["tasks"]), items[itemType["type"]], 0),
+            "error": None,
+            "progression": 0
+        }
+
+    ayon_api.update_event(
+        eventId,
+        sender=ayon_api.get_service_addon_name(),
+        summary=eventSummary
+    )
+
     res = ayon_api.post(
         f"{processor.entrypoint}/projects/{project_name}/sync/all",
-        items=items
+        items=items,
+        eventId=eventId
     )
 
     try:
