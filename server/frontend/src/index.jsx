@@ -4,7 +4,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { AddonProvider, AddonContext } from '@ynput/ayon-react-addon-provider'
 
-import PairingList from './PairingList'
+import PairingList from './pairing/List'
 
 import '@ynput/ayon-react-components/dist/style.css'
 
@@ -38,10 +38,10 @@ const MainContainer = styled.div`
 
 const App = () => {
   const accessToken = useContext(AddonContext).accessToken
-  const addonName = useContext(AddonContext).addonName
-  const addonVersion = useContext(AddonContext).addonVersion
-  // const addonName = 'aquarium' // For development
-  // const addonVersion = '0.0.3+git'  // For development
+//   const addonName = useContext(AddonContext).addonName
+//   const addonVersion = useContext(AddonContext).addonVersion
+  const addonName = 'aquarium' // For development
+  const addonVersion = '0.0.3+git'  // For development
   const [tokenSet, setTokenSet] = useState(false)
 
   useEffect(() =>{
@@ -73,8 +73,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <AddonProvider debug>
       <MainContainer>
         <header>
-          <img width="50%" src="https://storage.googleapis.com/fatfishlab-public/aquarium-studio-website/aquarium_logo_blue.png" alt="logo" />
-          <h2>Select projects you want to synchronize</h2>
+          <img width="200px" src="https://storage.googleapis.com/fatfishlab-public/aquarium-studio-website/aquarium-ayon-logo.min.png" alt="logo" />
+          <h2>Select projects you want to pair or synchronize</h2>
         </header>
         <App />
       </MainContainer>

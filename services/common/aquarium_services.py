@@ -57,6 +57,7 @@ class AquariumServices:
     Aquarium services for AYON.
     This class is used by leecher and processor services to limit code repetition.
     """
+    bot_key: str
     aq = Aquarium()
     listener = None
 
@@ -115,6 +116,8 @@ class AquariumServices:
         self.aq.api_url = url
         self.aq.domain = domain
         self.aq.bot(bot_key).signin(bot_secret)
+
+        self.bot_key = bot_key
 
 
     def connect(self):

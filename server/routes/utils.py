@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, List, Dict
 
+import json
 import unicodedata
 import contextlib
 from typing import Any
@@ -183,7 +184,7 @@ async def parse_task_types(addon: "AquariumAddon", templateTasks: List[Dict[str,
                 original_name=aqTask["name"],
                 name=name,
                 shortName=short_name,
-                icon=icon,
+                icon=icon or "task_alt",
             )
         )
 
@@ -303,3 +304,14 @@ def parse_attrib(projectData: dict[str, Any], properties: List[Dict[str, Any]] |
                     pass
 
     return result
+
+async def set_aquariumKey_on_project(project_name: str, aquariumProjectKey: str):
+    return await Postgres.execute(
+        """
+        UPDATE projects
+        SET data['aquariumProjectKey'] = $1
+        WHERE name = $2
+        """,
+        aquariumProjectKey,
+        project_name,
+    )

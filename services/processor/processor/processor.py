@@ -62,6 +62,12 @@ class AquariumProcessor():
             description="Processing sync project",
             sequential=True
         ) or enroll_event_job(
+            source_topic="aquarium.project_create",
+            target_topic="aquarium.process",
+            sender=get_service_addon_name(),
+            description="Processing create Aquarium project",
+            sequential=True
+        ) or enroll_event_job(
             source_topic="aquarium.leech",
             target_topic="aquarium.process",
             sender=get_service_addon_name(),
@@ -124,6 +130,8 @@ class AquariumProcessor():
         # TODO: Users are not synced yet. Need to be checked with users before.
         if ayonTopic == 'aquarium.sync_project':
             projects.sync(self, rawEvent["payload"]['aquariumProjectKey'], job.get('dependsOn', ''))
+        if ayonTopic == 'aquarium.project_create':
+            projects.create(self, rawEvent["payload"]['aquariumProjectName'], rawEvent["project"])
         elif ayonTopic == 'aquarium.leech':
             event = self._AQS.aq.event(rawEvent["payload"])
             if event.topic == 'item.updated.Project':

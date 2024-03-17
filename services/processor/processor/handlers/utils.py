@@ -41,6 +41,9 @@ def ayonise_folder(aqItem) -> dict[str, str]:
         "attrib": {}
     }
 
+    if aqItem.data.ayonId:
+        ayonised['id'] = aqItem.data.ayonId
+
     if 'status' in aqItem.data:
         ayonised['status'] = aqItem.data.status
 
@@ -89,6 +92,9 @@ def ayonise_task(aqTask, aqUserEmails) -> dict[str, str]:
         "assignees": []
     }
 
+    if aqTask.data.ayonId:
+        ayonised['id'] = aqTask.data.ayonId
+
     if 'status' in aqTask.data:
         ayonised['status'] = aqTask.data.status
 
@@ -104,28 +110,3 @@ def ayonise_task(aqTask, aqUserEmails) -> dict[str, str]:
             ayonised['assignees'].append(ayon_users[aqUserEmail])
 
     return ayonised
-
-def sync_task(processor: "AquariumProcessor", event):
-    """Send sync request to Aquarium addon API."""
-    context = event.get_context()
-    aqTask = context["path"][0]
-    # FIXME: Change to context['project'] on next aquarium-python-api release
-    aqProject = context["path"][-1]
-
-    project_name = processor.get_paired_ayon_project(aqProject._key)
-    if not project_name:
-        return  # do nothing as aquarium and ayon project are not paired
-
-    aqUserEmails = aqTask.traverse(meshql="# -($Assigned)> $User VIEW item.data.email")
-    task = ayonise_task(aqTask, aqUserEmails)
-
-    response = ayon_api.post(
-        f"{processor.entrypoint}/projects/{project_name}/sync/task",
-        task=task,
-        path=[item.to_dict() for item in context["path"]],
-    )
-
-    try:
-        response.raise_for_status()
-    except Exception as e:
-        log.error(f"Error while syncing {aqTask.type} {aqTask._key}: {e}")

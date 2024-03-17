@@ -13,7 +13,9 @@ from .settings import AquariumSettings
 
 from .routes.pairing import (
     get_paired_projects, ProjectPaired,
-    pair_project, ProjectsPairRequest)
+    pair_ayon_project, ProjectsPairRequest,
+    create_ayon_project, create_aquarium_project, ProjectsCreateRequest,
+    unpair_project)
 
 from .routes.sync import (
     trigger_sync_project,
@@ -57,6 +59,7 @@ class AquariumAddon(BaseServerAddon):
         "processor": {"image": f"ynput/ayon-aquarium-processor:{__version__}"}
     }
 
+    bot_key: str
     aq: Aquarium = Aquarium()
     aq_default_statuses = list(DEFAULT_STATUSES.values())
 
@@ -67,6 +70,8 @@ class AquariumAddon(BaseServerAddon):
 
         self.add_endpoint("/projects/pair", self.GET_projects_paired, method="GET")
         self.add_endpoint("/projects/pair", self.POST_projects_pair, method="POST")
+        self.add_endpoint("/projects", self.POST_projects_create, method="POST")
+        self.add_endpoint("/projects/{project_name}/pair", self.DELETE_projects_pair, method="DELETE")
         self.add_endpoint("/projects/{project_name}/sync", self.POST_projects_sync, method="POST")
         self.add_endpoint("/projects/{project_name}/sync/all", self.POST_projects_sync_all, method="POST")
         self.add_endpoint("/projects/{project_name}/sync/folder", self.POST_projects_sync_folder, method="POST")
@@ -87,13 +92,34 @@ class AquariumAddon(BaseServerAddon):
         await self.connect_aquarium()
         return await get_paired_projects(self)
 
+    # POST /projects
+    async def POST_projects_create(self, user: CurrentUser, request: ProjectsCreateRequest) -> EmptyResponse:
+        if not user.is_manager:
+            raise ForbiddenException("Only managers can create projects")
+
+        await self.connect_aquarium()
+        if request.aquariumProjectKey is None:
+            await create_aquarium_project(self, user, request)
+        else:
+            await create_ayon_project(self, user, request)
+        return EmptyResponse(status_code=201)
+
     # POST /projects/pair
     async def POST_projects_pair(self, user: CurrentUser, request: ProjectsPairRequest) -> EmptyResponse:
         if not user.is_manager:
-            raise ForbiddenException("Only managers can pair Aquarium projects")
+            raise ForbiddenException("Only managers can pair projects")
 
         await self.connect_aquarium()
-        await pair_project(self, user, request)
+        await pair_ayon_project(self, user, request)
+        return EmptyResponse(status_code=201)
+
+    # DELETE /projects/pair
+    async def DELETE_projects_pair(self, user: CurrentUser, project_name: ProjectName) -> EmptyResponse:
+        if not user.is_manager:
+            raise ForbiddenException("Only managers can unpair Aquarium projects")
+
+        await self.connect_aquarium()
+        await unpair_project(self, user, project_name)
         return EmptyResponse(status_code=201)
 
     # POST /projects/{project_name}/sync
@@ -179,3 +205,5 @@ class AquariumAddon(BaseServerAddon):
         self.aq.api_url = settings.url
         self.aq.domain = settings.domain
         self.aq.bot(actual_bot_key).signin(actual_bot_secret)
+
+        self.bot_key = actual_bot_key

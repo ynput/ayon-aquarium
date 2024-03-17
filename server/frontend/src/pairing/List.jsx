@@ -3,7 +3,7 @@ import addonData from '/src/common'
 import { useState, useEffect } from 'react'
 import { Panel, ScrollPanel } from '@ynput/ayon-react-components'
 
-import PairingButton from './PairingButton'
+import PairingButton from './Button'
 
 import styled from 'styled-components'
 
@@ -21,19 +21,41 @@ const Warn = styled.span`
 `
 
 const Table = styled.table`
+  display: flex;
+  flex-direction: column;
   border-collapse: collapse;
   width: 100%;
 
   thead {
+    display: grid;
+    grid-template-columns: 1fr;
     position: sticky;
     top: 0;
     background-color: var(--md-sys-color-surface);
     border-radius: 4px;
+    width: 100%;
+  }
+
+  tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: var(--md-sys-color-surface);
+    }
+
+    >:last-child {
+      justify-self: flex-end;
+    }
   }
 
   th, td {
     padding: 0.5rem;
     height: 48px;
+    display: flex;
+    align-items: center;
   }
 
   th {
@@ -77,10 +99,10 @@ const PairingList = () => {
           </thead>
           <tbody>
         {pairings.map((pairing) => (
-          <tr key={pairing.aquariumProjectKey}>
-            <td>{pairing.aquariumProjectName}</td>
+          <tr key={pairing.aquariumProjectKey || pairing.ayonProjectName}>
+            <td>{pairing.aquariumProjectName || <Warn>Not paired</Warn>}</td>
             <td>{pairing.ayonProjectName || <Warn>Not paired</Warn>}</td>
-            <td><PairingButton onPair={loadPairings} pairing={pairing} /></td>
+            <td><PairingButton refresh={loadPairings} pairing={pairing} /></td>
           </tr>
         ))}
           </tbody>

@@ -136,9 +136,9 @@ async def sync_folder(addon: "AquariumAddon", project_name: str, user: "UserEnti
     path = request.path
     saveRequired = False
 
-    if not 'aquariumKey' in folder['data']:
-        logging.error(f"Can't sync folder {folder['name']}. The aquariumKey is not found on the folder data.")
-        return "aquariumKey not found"
+    if not 'aquariumKey' in folder['data'] and not 'id' in folder:
+        logging.error(f"Can't sync folder {folder['name']}. The aquariumKey or id is not found on the folder data.")
+        return "aquariumKey or id not found"
 
     # QUESTION: To discuss with users, should we create all intermediate folders
     if path is not None:
@@ -147,10 +147,17 @@ async def sync_folder(addon: "AquariumAddon", project_name: str, user: "UserEnti
         if parent is not None:
            folder['parentId'] = parent.id
 
-    folderEntity = await get_folder_by_aquarium_key(project_name, folder['data']['aquariumKey'])
+    if 'id' in folder:
+        folderEntity = await FolderEntity.load(project_name, folder['id'])
+    else:
+        folderEntity = await get_folder_by_aquarium_key(project_name, folder['data']['aquariumKey'])
 
     # Folder already exists
     if folderEntity:
+        if folderEntity.data.get('aquariumKey', None) != folder['data'].get('aquariumKey', None) and folder['data'].get('aquariumKey', None) is not None:
+            folderEntity.data['aquariumKey'] = folder['data']['aquariumKey']
+            saveRequired = True
+
         if folder['name'] != folderEntity.name:
             setattr(folderEntity, 'name', folder['name'])
             saveRequired = True
@@ -208,6 +215,10 @@ async def sync_task(addon: "AquariumAddon", project_name: str, user: "UserEntity
         logging.error(f"Can't sync task {task['name']} #{task['data']['aquariumKey']}. The folderId #{path[1]['_key']} is not found on Ayon database.")
         return "No folderId provided"
 
+    if not 'aquariumKey' in task['data'] and not 'id' in task:
+        logging.error(f"Can't sync task {task['name']}. The aquariumKey or id is not found on the task data.")
+        return "aquariumKey or id not found"
+
     project = await get_ayon_project(project_name)
     if not 'taskType' in task:
         for taskType in project.task_types:
@@ -217,10 +228,17 @@ async def sync_task(addon: "AquariumAddon", project_name: str, user: "UserEntity
     if not 'status' in task or task['status'] is None:
         task['status'] = project.statuses[0]['name']
 
-    taskEntity = await get_task_by_aquarium_key(project_name, task['data']['aquariumKey'])
+    if 'id' in task:
+        taskEntity = await TaskEntity.load(project_name, task['id'])
+    else:
+        taskEntity = await get_task_by_aquarium_key(project_name, task['data']['aquariumKey'])
 
     # Task already exists
     if taskEntity:
+        if taskEntity.data.get('aquariumKey', None) != task['data'].get('aquariumKey', None) and task['data'].get('aquariumKey', None) is not None :
+            taskEntity.data['aquariumKey'] = task['data']['aquariumKey']
+            saveRequired = True
+
         if task['name'] != taskEntity.name:
             setattr(taskEntity, 'name', task['name'])
             saveRequired = True
@@ -251,6 +269,7 @@ async def sync_task(addon: "AquariumAddon", project_name: str, user: "UserEntity
             )
             saveRequired = True
         except Exception as e:
+            print(e)
             logging.error(f"Error while creating task {task['name']} #{task['data']['aquariumKey']}: {e}")
             return ''
 
