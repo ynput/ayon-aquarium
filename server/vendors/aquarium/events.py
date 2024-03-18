@@ -6,7 +6,7 @@ import codecs
 
 from .entity import Entity
 from .tools import pretty_print_format
-from dotmap import DotMap
+from .dotmap import DotMap
 
 import logging
 logger=logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from . import JSON_CONTENT_TYPE
 from .tools import evaluate, pretty_print_format
-from dotmap import DotMap
+from .dotmap import DotMap
 import logging
 logger=logging.getLogger(__name__)
 
