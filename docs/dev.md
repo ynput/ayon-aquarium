@@ -11,7 +11,7 @@ If you didn't read [the addon presentation](../README.md#presentation), go check
 
 ## Requirements
 
-We will need to clone several Ayon repositories in order to run everything locally:
+You will need to clone several Ayon repositories in order to run everything locally:
 
 - You need to [install Docker](https://docs.docker.com/engine/install/) first.
 - [Ayon Docker](https://github.com/ynput/ayon-docker)
@@ -30,7 +30,7 @@ We will need to clone several Ayon repositories in order to run everything local
 
 ### Optional requirements
 
-If you are looking for Python type check, we will need extra steps:
+If you are looking for Python type checking, you will need extra steps:
 
 1. Clone [Ayon Backend](https://github.com/ynput/ayon-backend) repository
 2. Clone [Aquarium python API](https://github.com/fatfish-lab/aquarium-python-api)
@@ -42,10 +42,9 @@ If you are looking for Python type check, we will need extra steps:
 
 ## Setup dev environment
 
-
 ### 1. Start Ayon
 
-Start your Ayon instances, from the Ayon Docker repository, using the command `docker compose up --build`. For a more precise steps, check out the repository README file.
+Start your Ayon instances, from the Ayon Docker repository, using the command `docker compose up --build`. For a more precise steps, check out the [repository README file](https://github.com/ynput/ayon-docker).
 
 ### 2. Create a service user
 

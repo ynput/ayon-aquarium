@@ -1,5 +1,6 @@
 import {
   Button,
+  Toolbar
 } from "@ynput/ayon-react-components";
 import styled from "styled-components";
 
@@ -21,6 +22,10 @@ export const DialogTitle = styled.div`
     font-weight: inherit;
   }
 `;
+
+export const ButtonGroup = styled(Toolbar)`
+  width: 180px;
+`
 
 export const ErrorContainer = styled.div`
   display: flex;

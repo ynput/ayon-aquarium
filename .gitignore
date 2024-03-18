@@ -166,3 +166,5 @@ services/leecher/aquarium_common/**
 services/processor/aquarium_common/**
 old/
 server/frontend/node_modules/**
+services/processor/processor/hierarchy.json
+services/processor/processor/output.json

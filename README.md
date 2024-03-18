@@ -1,16 +1,18 @@
 # Aquarium addon
 
-![Aquariu addon for Ayon](https://storage.googleapis.com/fatfishlab-public/aquarium-studio-website/aquarium-ayon-logo.png)
+<p align="center">
+  <img src="server/frontend/public/aquarium-ayon.png" alt="Aquarium addon for Ayon" height="200">
+</p>
 
 > [!NOTE]
-> This addon is ready to be used in production, but keep in mind that it isn't been tester heavily in a production environment.
-> If you have any issue, feel free to reach us or directly open a new issue.
+> This addon is ready to be used, but keep in mind that it isn't been tested heavily in a production environment.
+> If you have any issue, feel free to [reach us](mailto:support@fatfi.sh) or directly open a new issue.
 
 ## Presentation
 
-Welcome in [Aquarium](https://fatfi.sh/aquarium) addon for [Ayon](https://ynput.io/ayon/).
+Welcome in [Aquarium](https://fatfi.sh/aquarium) addon for [Ayon](https://ynput.io/ayon/). 🎉
 
-With this addon, you will be able to connect your projects from Ayon and Aquarium to synchronize your data.
+With this addon, you will be able to connect your projects from Ayon and Aquarium to synchronize your data. You can also create new Aquarium projects, using your existing Ayon projects.
 
 This addon is composed by 3 main parts:
 
@@ -30,7 +32,7 @@ This addon is composed by 3 main parts:
 Client code is used in the [Ayon Launcher](https://github.com/ynput/ayon-launcher), the AYON pipeline desktop application.
 
 > [!WARNING]
-> The client integration is not ready
+> The client integration is not finished yet.
 
 This client integration allow you to
 
@@ -39,9 +41,9 @@ This client integration allow you to
 
 #### Server
 
-Python server-side part of the addon. It's mainly used to declare specific addon API endpoint, used by the leecher and processor services to keep your data in sync.
+Python server-side part of the addon. It's mainly used to declare specific addon API endpoints, used by the leecher and processor services to keep your data in sync.
 
-It's also responsible to expose specific addon settings, in your Ayon server and project settings.
+It's also responsible to decalre specific addon settings, in your Ayon server and project settings.
 
 ##### Frontend
 

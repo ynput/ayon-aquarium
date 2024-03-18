@@ -108,6 +108,11 @@ const EventDialog = ({ ayonEventId, onHide }) => {
           </Table>
         </>
       }
+      {ayonEvent != null && ayonEvent.status == null && (
+        <ErrorContainer>
+          Does Aquarium addon processor is running ?
+        </ErrorContainer>
+      )}
       {error && (
         <ErrorContainer>
           {error}
