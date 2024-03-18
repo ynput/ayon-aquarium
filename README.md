@@ -24,7 +24,6 @@ This addon is composed by 3 main parts:
   - Leecher
   - Processor
 
-
 ### Directory structure
 
 #### Client
@@ -70,7 +69,7 @@ This addon is available in Ayon's addon market, or you can clone/download this r
 Looking to develop on this addon ?
 First of all thanks !
 
-We created a [dedicated documentation here](/docs/dev.md).
+We created a [dedicated documentation here](https://ayon.ynput.io/docs/addon_aquarium_admin).
 
 ## Maintainers
 
