@@ -18,6 +18,7 @@ from .items.usergroup import Usergroup
 from .items.organisation import Organisation
 from .items.playlist import Playlist
 from .element import Element
+from .events import Event
 from .utils import Utils
 
 
@@ -33,6 +34,7 @@ import json
 import logging
 logger=logging.getLogger(__name__)
 
+
 class Aquarium(object):
     """
     This class describes the main class of Aquarium
@@ -45,6 +47,8 @@ class Aquarium(object):
     :type api_version: string, optional
     :param domain: Specify the domain used for unauthenticated requests. Mainly for Aquarium Fatfish Lab dev or local Aquarium server without DNS
     :type domain: string, optional
+    :param strict_dotmap: Specify if the dotmap should create new property dynamically (default : `False`). Set to `True` to have default Python behaviour like on Dict()
+    :type strict_dotmap: boolean, optional
 
     :var token: Get the current token (populated after a first :func:`~aquarium.aquarium.Aquarium.signin`)
     :var edge: Access to Edge class
@@ -75,7 +79,7 @@ class Aquarium(object):
     :vartype utils: :class:`~aquarium.utils.Utils`
     """
 
-    def __init__(self, api_url='', token='', api_version='v1', domain=None):
+    def __init__(self, api_url='', token=None, api_version='v1', domain=None, strict_dotmap=False):
         """
         Constructs a new instance.
         """
@@ -86,6 +90,7 @@ class Aquarium(object):
         self.api_version=api_version
         self.token=token
         self.domain=domain
+        self.strict_dotmap=strict_dotmap
 
         # Classes
         self.events=Events(parent=self)
@@ -104,6 +109,7 @@ class Aquarium(object):
         self.task=Task(parent=self)
         self.shot=Shot(parent=self)
         self.asset=Asset(parent=self)
+        self.event=Event(parent=self)
 
     def do_request(self, *args, **kwargs):
         """
@@ -152,8 +158,8 @@ class Aquarium(object):
         logger.debug('Send request : %s %s', typ, path)
         response=self.session.request(typ, path, headers=headers, auth=AquariumAuth(self.token, self.domain), **kwargs)
 
+        evaluate(response)
         if not stream:
-            evaluate(response)
             if decoding:
                 response=response.json()
 
@@ -200,6 +206,9 @@ class Aquarium(object):
             #As Edge
             elif id.split('/')[0]=='connections':
                 cls=self.edge
+            #As Event
+            elif id.split('/')[0]=='events':
+                cls=self.event
             if cls is not None:
                 value=cls(data=data)
 
@@ -384,7 +393,7 @@ class Aquarium(object):
         file.close()
         return result
 
-    def query(self, meshql='', aliases={}) -> list:
+    def query(self, meshql='', aliases={}):
         """
         Query entities
 

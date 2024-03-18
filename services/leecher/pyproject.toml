@@ -7,7 +7,7 @@ authors = ["Fatfish Lab <hello@fatfi.sh>"]
 [tool.poetry.dependencies]
 python = ">=3.9,<3.10"
 ayon-python-api = "1.0.0"
-aquarium-python-api = "2.1.0.dev5"
+aquarium-python-api = "2.1.0.dev6"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

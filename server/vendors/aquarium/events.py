@@ -4,8 +4,9 @@ import json
 import time
 import codecs
 
+from .entity import Entity
 from .tools import pretty_print_format
-from .dotmap import DotMap
+from dotmap import DotMap
 
 import logging
 logger=logging.getLogger(__name__)
@@ -168,7 +169,7 @@ class _Callback(object):
         if self.callback:
             self.callback(event)
 
-class Event(object):
+class Event(Entity):
     """
     This class describes an Event object
     """
@@ -237,6 +238,15 @@ class Event(object):
     def __repr__(self):
         return str(self)
 
+    def to_dict(self):
+        """
+        Convert the event to a dictionary
+
+        :returns:   The event as a dictionary
+        :rtype:     dictionary
+        """
+        return super(Event, self).to_dict()
+
     def set_data_variables(self, data={}):
         """
         Sets the data variables.
@@ -244,6 +254,11 @@ class Event(object):
         :param      data:  The data
         :type       data:  dictionary
         """
+        self._timestamp=data.get('_timestamp')
+        self._retry=data.get('_retry')
+        self._category=data.get('_category')
+        self._verb=data.get('_verb')
+
         self._key=data.get('_key')
         self._id=data.get('_id')
         self._rev=data.get('_rev')
@@ -257,15 +272,15 @@ class Event(object):
 
         entity_data=data.get('data')
         if entity_data:
-            self.data=DotMap(entity_data)
+            self.data=DotMap(entity_data, _dynamic=(not bool(self.parent.strict_dotmap)))
 
-        actionRegex = r"^(?:custom[.])?(?P<category>\w+)([.](?P<verb>\w+))?([.](\w+))*$"
-        actionMatched = re.match(actionRegex, self.topic)
-        if actionMatched.group('category'):
-            self._category = actionMatched.group('category')
+        topicRegex = r"^(?:custom[.])?(?P<category>\w+)([.](?P<verb>\w+))?([.](\w+))*$"
+        topicMatched = re.match(topicRegex, self.topic)
+        if topicMatched.group('category'):
+            self._category = topicMatched.group('category')
 
-        if actionMatched.group('verb'):
-            self._verb = actionMatched.group('verb')
+        if topicMatched.group('verb'):
+            self._verb = topicMatched.group('verb')
 
     def do_request(self, *args, **kwargs):
         """
@@ -316,3 +331,48 @@ class Event(object):
             return None
 
         return event
+
+    def get(self):
+        """
+        Get the event
+
+        :returns:   The event
+        :rtype:     Event object
+        """
+        if (self._key):
+            event = self.do_request('GET', 'events/{key}'.format(key=self._key))
+            self.set_data_variables(event)
+            return self
+        else:
+            raise ValueError('The event has no key, so it is not possible to get it')
+
+    def get_context(self):
+        """
+        Get the context of the event up to the project
+
+        :returns:   The context of the event with the item Project and it's traversal path
+        :rtype:     dictionary with the project :class:`~aquarium.item.Item` and path as list of :class:`~aquarium.item.Item`
+        """
+        endpoint = 'events/{key}/traverse'.format(key=self._key)
+        payload = {
+            "query": "# <($Emit)- 0,1 * <($Child, 10)- 0,1 item.type IN ['Project'] AND path.vertices[*].type NONE == 'User' SORT null VIEW $view",
+            "aliases": {
+                "view": {
+                    "project": "item",
+                    "path": "path.vertices"
+                }
+            }
+        }
+        if (self.emittedFrom):
+            payload['query'] = "# <($Child, 10)- 0,1 item.type IN ['Project'] AND path.vertices[*].type NONE == 'User' SORT null VIEW $view"
+            endpoint = '{emittedFrom}/traverse'.format(emittedFrom=self.emittedFrom)
+
+        context = self.do_request('POST', endpoint, json=payload)
+        print(payload['query'])
+        if (context and len(context) > 0):
+            return {
+                'project': self.parent.cast(context[0]['project']),
+                'path': [self.parent.cast(item) for item in context[0]['path']]
+            }
+        else:
+            raise ValueError('The event has emittedFrom attribute, but the context could not be found')

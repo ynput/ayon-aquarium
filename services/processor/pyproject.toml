@@ -8,7 +8,7 @@ authors = ["Fatfish Lab <hello@fatfi.sh>"]
 python = ">=3.9,<3.10"
 nxtools = "^1.6"
 ayon-python-api = "1.0.0"
-aquarium-python-api = "2.1.0.dev5"
+aquarium-python-api = "2.1.0.dev6"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
