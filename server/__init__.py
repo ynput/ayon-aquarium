@@ -63,7 +63,7 @@ class AquariumAddon(BaseServerAddon):
     aq: Aquarium = Aquarium()
     aq_default_statuses = list(DEFAULT_STATUSES.values())
 
-    frontend_scopes: dict[str, dict[str, str]] = {"project": {"sidebar": "hierarchy"}}
+    # frontend_scopes: dict[str, dict[str, str]] = {"project": {"sidebar": "hierarchy"}}
 
     def initialize(self):
         logging.info("Initializing Aquarium addon...")

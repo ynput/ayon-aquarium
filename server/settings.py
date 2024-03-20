@@ -92,7 +92,6 @@ class AquariumSettings(BaseSettingsModel):
     services: AquariumServiceSettings = Field(
         default_factory=AquariumServiceSettings, # type: ignore
         title="Service settings",
-        scope=["studio"],
     )
 
     sync: SyncSettings = Field(
