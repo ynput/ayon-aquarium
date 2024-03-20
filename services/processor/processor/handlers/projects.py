@@ -170,6 +170,7 @@ def create(processor: "AquariumProcessor", aquariumProjectName: str, ayonProject
 
 
     if 'items' in imported and len(imported['items']) > 0:
+        # FIXME: Need to exclude the creation of the project in the listenner to avoid double sync
         processor._AQS.aq.edge.create(type='Ayon', from_key=imported['items'][0]['_key'], to_key=processor._AQS.bot_key)
         ayon_api.patch(
             f"/projects/{ayonProjectName}",
