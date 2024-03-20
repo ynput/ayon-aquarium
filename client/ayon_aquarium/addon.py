@@ -70,7 +70,7 @@ class AquariumAddon(AYONAddon, IPluginPaths, ITrayAction):
         if validate_credentials(token):
             set_credentials_envs(token)
         else:
-            self.show_dialog()
+            self.show_signin()
 
     def _get_dialog(self):
         if self._dialog is None:
@@ -80,7 +80,7 @@ class AquariumAddon(AYONAddon, IPluginPaths, ITrayAction):
 
         return self._dialog
 
-    def show_dialog(self):
+    def show_signin(self):
         """Show dialog to log-in."""
 
         # Make sure dialog is created
@@ -91,15 +91,15 @@ class AquariumAddon(AYONAddon, IPluginPaths, ITrayAction):
 
     def on_action_trigger(self):
         """Implementation of abstract method for `ITrayAction`."""
-        self.show_dialog()
+        self.show_signin()
 
     def get_plugin_paths(self):
         """Implementation of abstract method for `IPluginPaths`."""
-
+        print([os.path.join(AQUARIUM_ADDON_DIR, "plugins", "launcher")])
         return {
             "publish": self.get_publish_plugin_paths(),
             # The laucher action is not working since AYON conversion
-            # "actions": [os.path.join(AQUARIUM_ADDON_DIR, "plugins", "launcher")],
+            "actions": [os.path.join(AQUARIUM_ADDON_DIR, "plugins", "launcher")],
         }
 
     def get_publish_plugin_paths(self, host_name=None):

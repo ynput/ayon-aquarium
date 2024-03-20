@@ -127,11 +127,11 @@ def save_credentials(token: str):
     user_registry.set_item("token", token)
 
 
-def load_credentials() -> Tuple[str, str]:
+def load_credentials() -> str:
     """Load registered credentials.
 
     Returns:
-        Tuple[str, str]: (Token)
+        str: (Token)
     """
     # Get user registry
     user_registry = OpenPypeSecureRegistry("aquarium_user")
