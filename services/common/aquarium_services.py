@@ -38,10 +38,8 @@ ALLOWED_AQ_TOPICS: set = {
 
 
 def get_service_label() -> str:
-    return " ".join([
-        str(get_service_addon_name()),
-        str(get_service_addon_version())
-    ])
+    return " ".join([str(get_service_addon_name()), str(get_service_addon_version())])
+
 
 def connect_to_ayon():
     """Connect to AYON server."""
@@ -62,8 +60,10 @@ def connect_to_ayon():
 
     log.info("Connected to AYON server.")
 
+
 def register_signals(_AQS: "AquariumServices"):
     """Register signals to stop Aquarium services"""
+
     def signal_handler(sig, frame):
         print("Process stop requested. Terminating process.")
         _AQS.stop()
@@ -72,11 +72,13 @@ def register_signals(_AQS: "AquariumServices"):
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
+
 class AquariumServices:
     """
     Aquarium services for AYON.
     This class is used by leecher and processor services to limit code repetition.
     """
+
     bot_key: str
     aq = Aquarium()
     listener = None
@@ -113,10 +115,7 @@ class AquariumServices:
         url = aquarium_settings["url"]
         domain = aquarium_settings["domain"]
 
-        secrets_by_name = {
-            secret["name"]: secret["value"]
-            for secret in get_secrets()
-        }
+        secrets_by_name = {secret["name"]: secret["value"] for secret in get_secrets()}
 
         services = aquarium_settings["services"]
         bot_key = services["bot_key"]
@@ -138,7 +137,6 @@ class AquariumServices:
         self.aq.bot(bot_key).signin(bot_secret)
 
         self.bot_key = bot_key
-
 
     def connect(self):
         tb_content = None
@@ -163,9 +161,8 @@ class AquariumServices:
         self.log.error(error_message)
         if tb_content:
             print(tb_content)
-        if (
-            (tb_content is not None and self.session_fail_logged == 2)
-            or (tb_content is None and self.session_fail_logged == 1)
+        if (tb_content is not None and self.session_fail_logged == 2) or (
+            tb_content is None and self.session_fail_logged == 1
         ):
             return
 
