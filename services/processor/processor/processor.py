@@ -11,7 +11,13 @@ from ayon_api import (
     update_event,
 )
 
-from aquarium_common import AquariumServices, connect_to_ayon, register_signals
+from aquarium_common import (
+    AquariumServices,
+    connect_to_ayon,
+    register_signals,
+    IGNORED_AQ_TOPICS,
+    ALLOWED_AQ_TOPICS,
+)
 from .handlers import (
     sequences,
     projects,
@@ -122,7 +128,7 @@ class AquariumProcessor():
         ayonTopic = rawEvent["topic"]
         log.info(f"Processing event: {ayonTopic}")
 
-        if ayonTopic in self._AQS.IGNORE_TOPICS:
+        if ayonTopic in IGNORED_AQ_TOPICS:
             return
 
         # QUESTION: Does the events need to trigger a full patch or a partial one ?

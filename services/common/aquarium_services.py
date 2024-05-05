@@ -17,6 +17,26 @@ from ayon_api import (
 
 log = logging.getLogger(__name__)
 
+
+IGNORED_AQ_TOPICS: set = {}
+ALLOWED_AQ_TOPICS: set = {
+    "item.created.Asset",
+    "item.updated.Asset",
+    "item.created.Shot",
+    "item.updated.Shot",
+    "item.created.Sequence",
+    "item.updated.Sequence",
+    "item.created.Episode",
+    "item.updated.Episode",
+    "item.created.Task",
+    "item.updated.Task",
+    "item.created.Project",
+    # "item.updated.Project",
+    "user.assigned",
+    "user.unassigned",
+}
+
+
 def get_service_label() -> str:
     return " ".join([
         str(get_service_addon_name()),

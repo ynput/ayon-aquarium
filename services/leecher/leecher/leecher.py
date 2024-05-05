@@ -9,11 +9,16 @@ from typing import Any, Union
 from aquarium import Aquarium
 from aquarium import exceptions
 
-from aquarium_common import AquariumServices, connect_to_ayon, register_signals
+from aquarium_common import (
+    AquariumServices,
+    connect_to_ayon,
+    register_signals,
+    IGNORED_AQ_TOPICS,
+    ALLOWED_AQ_TOPICS,
+)
 
 import ayon_api
 
-IGNORE_TOPICS = {}
 
 log = logging.getLogger(__name__)
 _AQS = AquariumServices()
@@ -24,7 +29,10 @@ def create_event_description(event):
 
 
 def callback(event):
-    if event.topic in IGNORE_TOPICS:
+    """Callback function for Aquarium event listener."""
+    if event.topic in IGNORED_AQ_TOPICS:
+        log.warning(f"Event topic ignored: {event.topic}")
+        return
         return
 
     ayon_api.dispatch_event(
