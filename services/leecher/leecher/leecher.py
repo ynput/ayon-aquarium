@@ -33,6 +33,11 @@ def callback(event):
     if event.topic in IGNORED_AQ_TOPICS:
         log.warning(f"Event topic ignored: {event.topic}")
         return
+
+    if event.topic not in ALLOWED_AQ_TOPICS:
+        log.warning(f"Event topic not allowed: {event.topic}")
+        return
+
         return
 
     ayon_api.dispatch_event(
