@@ -30,7 +30,7 @@ ALLOWED_AQ_TOPICS: set = {
     "item.updated.Episode",
     "item.created.Task",
     "item.updated.Task",
-    "item.created.Project",
+    # "item.created.Project", # prevents double project creation
     # "item.updated.Project",
     "user.assigned",
     "user.unassigned",
