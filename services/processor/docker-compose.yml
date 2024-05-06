@@ -2,10 +2,10 @@ name: ayon-aquarium-services
 services:
   processor:
     container_name: processor
-    image: ynput/ayon-aquarium-processor:0.0.3
+    image: ynput/ayon-aquarium-processor:0.0.4
     restart: unless-stopped
     environment:
       - "AYON_SERVER_URL=${AYON_SERVER_URL}"
       - "AYON_API_KEY=${AYON_API_KEY}"
       - "AYON_ADDON_NAME=aquarium"
-      - "AYON_ADDON_VERSION=0.0.3"
+      - "AYON_ADDON_VERSION=0.0.4"
