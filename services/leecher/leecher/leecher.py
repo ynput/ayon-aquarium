@@ -31,11 +31,11 @@ def create_event_description(event):
 def callback(event):
     """Callback function for Aquarium event listener."""
     if event.topic in IGNORED_AQ_TOPICS:
-        log.warning(f"Event topic ignored: {event.topic}")
+        log.info(f"Event topic ignored: {event.topic}")
         return
 
     if event.topic not in ALLOWED_AQ_TOPICS:
-        log.warning(f"Event topic not allowed: {event.topic}")
+        log.info(f"Event topic not allowed: {event.topic}")
         return
 
     if ayon_api.dispatch_event(
