@@ -167,8 +167,7 @@ class AquariumProcessor():
 
     def set_job_processing(self, job):
         event_id = job["id"]
-        source_id = job["dependsOn"]
-        source_event = get_event(event_id)
+        source_event = get_event(job["dependsOn"])
 
         description = f"Processing {source_event['description']}"
 
@@ -182,7 +181,7 @@ class AquariumProcessor():
     def set_job_finished(self, job):
         event_id = job["id"]
         source_id = job["dependsOn"]
-        source_event = get_event(event_id)
+        source_event = get_event(source_id)
         description = f"Processed {source_event['description']}"
 
         update_event(
