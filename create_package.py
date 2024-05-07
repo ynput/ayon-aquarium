@@ -274,9 +274,7 @@ def _update_client_version(current_dir, log):
         return
 
     with open(version_file, "w") as stream:
-        stream.write(
-            CLIENT_VERSION_CONTENT.format(ADDON_NAME, ADDON_VERSION)
-        )
+        stream.write(CLIENT_VERSION_CONTENT.format(ADDON_NAME, ADDON_VERSION))
     log.info(f"Client 'version.py' updated to '{ADDON_VERSION}'")
 
 
@@ -291,7 +289,6 @@ def _get_client_zip_content(current_dir: str, log: logging.Logger):
         list[tuple[str, str]]: List of path mappings to copy. The destination
             path is relative to expected output directory.
     """
-
 
     log.info("Preparing client code zip")
 
@@ -319,9 +316,7 @@ def zip_client_side(addon_package_dir: str, current_dir: str, log: logging.Logge
 
     client_code_dir: str = _get_client_code_path(current_dir)
     if not os.path.isdir(client_code_dir):
-        raise RuntimeError(
-            f"Client directory was not found '{client_code_dir}'."
-        )
+        raise RuntimeError(f"Client directory was not found '{client_code_dir}'.")
 
     log.info("Preparing client code zip")
     private_dir: str = os.path.join(addon_package_dir, "private")
@@ -390,9 +385,7 @@ def copy_client_code(current_dir: str, output_dir: str, log: logging.Logger):
 
     client_code_dir: str = _get_client_code_path(current_dir)
     if not os.path.isdir(client_code_dir):
-        raise RuntimeError(
-            f"Client directory '{client_code_dir}' was not found."
-        )
+        raise RuntimeError(f"Client directory '{client_code_dir}' was not found.")
 
     full_output_dir = os.path.join(output_dir, ADDON_CLIENT_DIR)
     if os.path.exists(full_output_dir):
