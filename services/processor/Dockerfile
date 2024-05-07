@@ -1,5 +1,6 @@
 FROM python:3.9-bullseye
 ENV PYTHONUNBUFFERED=1
+LABEL org.opencontainers.image.description "Aquarium processor service for Ayon"
 
 RUN apt-get update \
   && apt-get install -y curl python3-pip python3-virtualenv \

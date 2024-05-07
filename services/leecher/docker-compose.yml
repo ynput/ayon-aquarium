@@ -2,7 +2,7 @@ name: ayon-aquarium-services
 services:
   leecher:
     container_name: leecher
-    image: ynput/ayon-aquarium-leecher:0.0.4
+    image: ghcr.io/fatfish-lab/ayon-aquarium-leecher:0.0.4
     restart: unless-stopped
     environment:
       - "AYON_SERVER_URL=${AYON_SERVER_URL}"

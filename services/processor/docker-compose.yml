@@ -2,7 +2,7 @@ name: ayon-aquarium-services
 services:
   processor:
     container_name: processor
-    image: ynput/ayon-aquarium-processor:0.0.4
+    image: ghcr.io/fatfish-lab/ayon-aquarium-processor:0.0.4
     restart: unless-stopped
     environment:
       - "AYON_SERVER_URL=${AYON_SERVER_URL}"

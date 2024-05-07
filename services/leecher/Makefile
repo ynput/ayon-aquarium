@@ -3,7 +3,7 @@ include ../.env
 SERVICE := leecher
 AYON_ADDON_VERSION=$(shell python -c "import os;import sys;content={};f=open('$(CURDIR)/../../version.py');exec(f.read(),content);f.close();print(content['__version__'])")
 BASE_NAME := ayon-aquarium-$(SERVICE)
-IMAGE := ynput/$(BASE_NAME):$(AYON_ADDON_VERSION)
+IMAGE := ghcr.io/fatfish-lab/$(BASE_NAME):$(AYON_ADDON_VERSION)
 BASH_CONTAINER_NAME := $(BASE_NAME)-bash-$(AYON_ADDON_VERSION)
 AYON_ADDON_NAME := aquarium
 DEV_BUNDLE_NAME := dev02
@@ -13,6 +13,9 @@ build:
 
 clean:
 	docker rmi $(IMAGE)
+
+dist: build
+	docker push $(IMAGE)
 
 dev:
 	cp -r ../common/ ./aquarium_common
