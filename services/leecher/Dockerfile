@@ -1,6 +1,7 @@
 FROM python:3.9-bullseye
 ENV PYTHONUNBUFFERED=1
 LABEL org.opencontainers.image.description "Aquarium leecher service for Ayon"
+LABEL org.opencontainers.image.source https://github.com/ynput/ayon-aquarium
 
 RUN apt-get update \
   && apt-get install -y curl python3-pip python3-virtualenv \
