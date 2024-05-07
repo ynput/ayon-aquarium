@@ -220,12 +220,12 @@ def copy_frontend_content(addon_output_dir: str, current_dir: str, log: logging.
         if executable is None:
             raise RuntimeError("npm and yarn executable was not found.")
 
-        install_command = [executable, "ci"]
+        install_command = [executable, "install"]
         build_command = [executable, "build"]
 
         if "npm" in executable:
             build_command.insert(1, "run")
-            build_command.append('-ci')
+            install_command[1] = "ci"
         elif "yarn" in executable:
             subprocess.run([executable, "import"], cwd=frontend_dirpath) # Convert package-lock.json to yarn.lock
 
