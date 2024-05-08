@@ -223,6 +223,40 @@ def copy_server_content(target: Path):
         safe_copy_file(file, target / file.relative_to(SERVER_DIR))
 
 
+def create_server_package(target: Path):
+    """Create server package zip file.
+
+    The zip file can be installed to a server using UI or rest api endpoints.
+
+    Args:
+        output_dir (str): Directory path to output zip file.
+        addon_output_dir (str): Directory path to addon output directory.
+        log (logging.Logger): Logger object.
+    """
+
+    log.info("Creating server package")
+    output_path = target / f"{ADDON_NAME}-{ADDON_VERSION}.zip"
+
+    with ZipFileLongPaths(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        # Move addon content to zip into 'addon' directory
+        addon_output_dir_offset = len(CURRENT_DIR.parts) + 1
+        for root, _, filenames in os.walk(CURRENT_DIR):
+            if not filenames:
+                continue
+
+            dst_root = None
+            if root != CURRENT_DIR:
+                dst_root = root[addon_output_dir_offset:]
+            for filename in filenames:
+                src_path = os.path.join(root, filename)
+                dst_path = filename
+                if dst_root:
+                    dst_path = os.path.join(dst_root, dst_path)
+                zipf.write(src_path, dst_path)
+
+    log.info(f"Output package can be found: {output_path}")
+
+
 def main(
     target_dir: Optional[str],
     skip_zip: Optional[bool] = False,
@@ -259,12 +293,12 @@ def main(
         target_package_root.mkdir(parents=True, exist_ok=True)
 
     try:
-        # # copy package file
-        # copy_package_file(target_package_root)
-        # # copy server content
-        # copy_server_content(target_package_root)
-        # # copy frontend content
-        # copy_frontend_content(target_package_root)
+        # copy package file
+        copy_package_file(target_package_root)
+        # copy server content
+        copy_server_content(target_package_root)
+        # copy frontend content
+        copy_frontend_content(target_package_root)
         # zip client code
         zip_client_side(target_package_root)
     except Exception as e:
@@ -280,8 +314,8 @@ def main(
 
     if not skip_zip:
         # create server package
-        # create_server_package(target, target_package_root)
-        pass
+        create_server_package(target_package_root)
+        # pass
 
 
 if __name__ == "__main__":
