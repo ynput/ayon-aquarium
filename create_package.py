@@ -21,43 +21,44 @@ Package contains server side files directly,
 client side code zipped in `private` subfolder.
 """
 
+import collections
 import os
-import sys
+import platform  # ? replace with sys.platform
 import re
 import shutil
-import platform
-import argparse
-import logging
-import collections
 import subprocess
+import sys
+import logging
+import argparse
+from pathlib import Path
+from typing import Iterable, Optional, Pattern
 import zipfile
-from typing import Optional, Iterable, Pattern, Union
 
 import package
 
 ADDON_NAME: str = package.name
 ADDON_VERSION: str = package.version
 
-# Name of folder where client code is located - e.g. 'ayon_maya'
-# Picked from package.py. but it is optional (server only addons don't have it)
-ADDON_CLIENT_DIR: Union[str, None] = "ayon_aquarium"
-if hasattr(package, "client_dir"):
-    ADDON_CLIENT_DIR = package.client_dir
 CLIENT_VERSION_CONTENT = '''# -*- coding: utf-8 -*-
 """Package declaring {} addon version."""
 __version__ = "{}"
 '''
 
+CURRENT_DIR: Path = Path(__file__).parent
+SERVER_DIR: Path = CURRENT_DIR / "server"
+CLIENT_DIR: Path = CURRENT_DIR / "client" / package.client_dir
+
+# COMMON_DIR: Path = CLIENT_DIR / ADDON_CLIENT_DIR / "common"
 
 # Patterns of directories to be skipped for server part of addon
 IGNORE_DIR_PATTERNS: list[Pattern] = [
     re.compile(pattern)
-    for pattern in [
+    for pattern in {
         # Skip directories starting with '.'
         r"^\.",
         # Skip any pycache folders
         "^__pycache__$",
-    ]
+    }
 ]
 
 # Patterns of files to be skipped for server part of addon
@@ -95,126 +96,75 @@ class ZipFileLongPaths(zipfile.ZipFile):
         return super(ZipFileLongPaths, self)._extract_member(member, tpath, pwd)
 
 
-def safe_copy_file(src_path: str, dst_path: str):
-    """Copy file and make sure destination directory exists.
+log = logging.getLogger(__name__)
 
-    Ignore if destination already contains directories from source.
 
-    Args:
-        src_path (str): File path that will be copied.
-        dst_path (str): Path to destination file.
-    """
-
-    if src_path == dst_path:
-        return
-
-    dst_dir: str = os.path.dirname(dst_path)
-    try:
-        os.makedirs(dst_dir)
-    except Exception:
-        pass
-
-    shutil.copy2(src_path, dst_path)
+def safe_copy_file(src: Path, dst: Path):
+    log.debug(f"Copying {src} to {dst}")
+    if src.is_file():
+        if not dst.parent.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
 
 
 def _value_match_regexes(value: str, regexes: Iterable[Pattern]) -> bool:
     return any(regex.search(value) for regex in regexes)
 
 
-def find_files_in_subdir(
-    src_path: str,
-    ignore_file_patterns: Optional[list[Pattern]] = None,
-    ignore_dir_patterns: Optional[list[Pattern]] = None,
-) -> list[tuple[str, str]]:
-    """Find all files to copy in subdirectories of given path.
+def update_client_version():
+    version_file = CLIENT_DIR / "version.py"
+    log.debug(f"{version_file = }")
+    if not version_file.exists():
+        raise RuntimeError(f"Version file '{version_file}' does not exist!")
+    log.debug(f"Updating client version in {version_file}")
 
-    All files that match any of the patterns in 'ignore_file_patterns' will
-        be skipped and any directories that match any of the patterns in
-        'ignore_dir_patterns' will be skipped with all subfiles.
+    with version_file.open("w") as f:
+        f.write(CLIENT_VERSION_CONTENT.format(ADDON_NAME, ADDON_VERSION))
 
-    Args:
-        src_path (str): Path to directory to search in.
-        ignore_file_patterns (Optional[list[Pattern]]): List of regexes
-            to match files to ignore.
-        ignore_dir_patterns (Optional[list[Pattern]]): List of regexes
-            to match directories to ignore.
 
-    Returns:
-        list[tuple[str, str]]: List of tuples with path to file and parent
-            directories relative to 'src_path'.
-    """
-
-    if ignore_file_patterns is None:
-        ignore_file_patterns = IGNORE_FILE_PATTERNS
-
-    if ignore_dir_patterns is None:
-        ignore_dir_patterns = IGNORE_DIR_PATTERNS
-    output: list[tuple[str, str]] = []
-
-    hierarchy_queue: collections.deque = collections.deque()
-    hierarchy_queue.append((src_path, []))
-    while hierarchy_queue:
-        item: tuple[str, str] = hierarchy_queue.popleft()
-        dirpath, parents = item
-        for name in os.listdir(dirpath):
-            path: str = os.path.join(dirpath, name)
-            if os.path.isfile(path):
-                if not _value_match_regexes(name, ignore_file_patterns):
-                    items: list[str] = list(parents)
-                    items.append(name)
-                    output.append((path, os.path.sep.join(items)))
+def get_files_to_copy(search_path: Path):
+    result = set()
+    for file in search_path.rglob("*"):  # could even filter here
+        if file.is_file():
+            if _value_match_regexes(file.name, IGNORE_FILE_PATTERNS):
                 continue
 
-            if not _value_match_regexes(name, ignore_dir_patterns):
-                items: list[str] = list(parents)
-                items.append(name)
-                hierarchy_queue.append((path, items))
-
-    return output
+            result.add(file)
+    return result
 
 
-def copy_server_content(addon_output_dir: str, current_dir: str, log: logging.Logger):
-    """Copies server side folders to 'addon_package_dir'
+def copy_client_content(target: Path):
+    # log.debug(f"Copying client code --> {target}")
 
-    Args:
-        addon_output_dir (str): Output directory path.
-        current_dir (str): addon repo dir
-        log (logging.Logger)
-    """
+    if target.is_dir():
+        shutil.rmtree(target)
 
-    log.info("Copying server content")
+    # recreate target folder
+    if target.exists():
+        raise RuntimeError(f"Failed to remove target folder '{target}'")
+    target.mkdir(parents=True, exist_ok=True)
 
-    filepaths_to_copy: list[tuple[str, str]] = []
-    server_dirpath: str = os.path.join(current_dir, "server")
+    update_client_version()
 
-    for name in os.listdir(server_dirpath):
-        src_dir = os.path.join(server_dirpath, name)
-        if not os.path.isdir(src_dir):
-            filepaths_to_copy.append((src_dir, name))
-            continue
-
-        for item in find_files_in_subdir(src_dir):
-            src_path, dst_subpath = item
-            filepaths_to_copy.append((src_path, os.path.join(name, dst_subpath)))
-
-    # Copy files
-    for src_path, dst_path in filepaths_to_copy:
-        safe_copy_file(src_path, os.path.join(addon_output_dir, "server", dst_path))
+    for file in get_files_to_copy(CLIENT_DIR):
+        safe_copy_file(file, target / file.relative_to(CLIENT_DIR))
 
 
-def copy_frontend_content(addon_output_dir: str, current_dir: str, log: logging.Logger):
-    filepaths_to_copy: list[tuple[str, str]] = []
+def copy_package_file(target: Path):
+    log.debug("Copying package file")
+    safe_copy_file(CURRENT_DIR / "package.py", target / "package.py")
 
-    frontend_dirpath: str = os.path.join(current_dir, "server", "frontend")
-    if not os.path.exists(frontend_dirpath):
+
+def _build_frontend():
+    frontend_dir: Path = CURRENT_DIR / "server" / "frontend"
+    if not frontend_dir.exists():
         log.info("Frontend directory was not found. Skipping")
         return
 
-    frontend_dist_dirpath: str = os.path.join(frontend_dirpath, "dist")
+    # frontend_dist_dir: str = frontend_dir / "dist"
 
-    if os.path.exists(os.path.join(frontend_dirpath, "package.json")):
-        # if package.json exists, we assume that frontend is a node project
-        # and we need to build it
+    if Path(frontend_dir, "package.json").exists():
+        # assume that frontend is a node project and we need to build it
         executable = shutil.which("npm") or shutil.which("yarn")
 
         if executable is None:
@@ -226,236 +176,112 @@ def copy_frontend_content(addon_output_dir: str, current_dir: str, log: logging.
         if "npm" in executable:
             build_command.insert(1, "run")
             install_command[1] = "ci"
-        elif "yarn" in executable:
+        if "yarn" in executable:
             subprocess.run(
-                [executable, "import"], cwd=frontend_dirpath
+                [executable, "import"], cwd=frontend_dir
             )  # Convert package-lock.json to yarn.lock
 
-        subprocess.run(install_command, cwd=frontend_dirpath)
-        subprocess.run(build_command, cwd=frontend_dirpath)
-
-    if not os.path.isdir(frontend_dirpath):
-        raise RuntimeError("Frontend dist directory not found.")
-
-    for item in find_files_in_subdir(frontend_dist_dirpath):
-        src_path, dst_subpath = item
-        filepaths_to_copy.append(
-            (src_path, os.path.join("frontend", "dist", dst_subpath))
-        )
-
-    # Copy files
-    for src_path, dst_path in filepaths_to_copy:
-        safe_copy_file(src_path, os.path.join(addon_output_dir, dst_path))
+        subprocess.run(install_command, cwd=frontend_dir)
+        subprocess.run(build_command, cwd=frontend_dir)
 
 
-def _get_client_code_path(current_dir: str):
-    return os.path.join(current_dir, "client", ADDON_CLIENT_DIR)
+def copy_frontend_content(target: Path):
+    target = target / "frontend" / "dist"
+    log.debug(f"Copying frontend code --> {target}")
+
+    frontend_dist_dir: Path = CURRENT_DIR / "server" / "frontend" / "dist"
+    _build_frontend()
+
+    for file in get_files_to_copy(frontend_dist_dir):
+        # C:\Users\Tony.Dorfmeister\dev\new-gitea\ayon\ayon-aquarium\server\frontend\dist\assets\index-91b6b809.css
+        # C:\Users\Tony.Dorfmeister\dev\new-gitea\ayon\ayon-aquarium\build\aquarium\0.0.4-dev.1\frontend\dist\assets\index-91b6b809.css
+        safe_copy_file(file, target / Path(*file.relative_to(CURRENT_DIR).parts[3:]))
 
 
-def _update_client_version(current_dir, log):
-    """Make sure version.py in client code does contain correct version.
-
-    The content of the file is defined by 'CLIENT_VERSION_CONTENT'. Is skipped
-        if 'version.py' file does not exist.
-
-    Args:
-        current_dir (str): Directory path of addon source.
-        log (logging.Logger): Logger object.
-    """
-
-    client_code_dir = _get_client_code_path(current_dir)
-    version_file = os.path.join(client_code_dir, "version.py")
-    if not os.path.exists(version_file):
-        log.info("Client does not contain 'version.py' file.")
-        return
-
-    with open(version_file, "w") as stream:
-        stream.write(CLIENT_VERSION_CONTENT.format(ADDON_NAME, ADDON_VERSION))
-    log.info(f"Client 'version.py' updated to '{ADDON_VERSION}'")
-
-
-def _get_client_zip_content(current_dir: str, log: logging.Logger):
-    """
-
-    Args:
-        current_dir (str): Directory path of addon source.
-        log (logging.Logger): Logger object.
-
-    Returns:
-        list[tuple[str, str]]: List of path mappings to copy. The destination
-            path is relative to expected output directory.
-    """
-
-    log.info("Preparing client code zip")
-
-    output: list[tuple[str, str]] = []
-
-    # Add client code content to zip
-    client_code_dir: str = _get_client_code_path(current_dir)
-    for path, sub_path in find_files_in_subdir(client_code_dir):
-        output.append((path, os.path.join(ADDON_CLIENT_DIR, sub_path)))
-    return output
-
-
-def zip_client_side(addon_package_dir: str, current_dir: str, log: logging.Logger):
-    """Copy and zip `client` content into 'addon_package_dir'.
-
-    Args:
-        addon_package_dir (str): Output package directory path.
-        current_dir (str): Directory path of addon source.
-        log (logging.Logger): Logger object.
-    """
-
-    if not ADDON_CLIENT_DIR:
-        log.info("Client directory was not defined. Skipping")
-        return
-
-    client_code_dir: str = _get_client_code_path(current_dir)
-    if not os.path.isdir(client_code_dir):
-        raise RuntimeError(f"Client directory was not found '{client_code_dir}'.")
-
-    log.info("Preparing client code zip")
-    private_dir: str = os.path.join(addon_package_dir, "private")
-
-    if not os.path.exists(private_dir):
-        os.makedirs(private_dir)
-
-    _update_client_version(current_dir, log)
-    mapping = _get_client_zip_content(current_dir, log)
-
-    zip_filepath: str = os.path.join(os.path.join(private_dir, "client.zip"))
+def zip_client_side(target: Path):
+    zip_filepath: Path = target / "private" / "client.zip"
+    if not zip_filepath.parent.exists():
+        zip_filepath.parent.mkdir(parents=True, exist_ok=True)
     with ZipFileLongPaths(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
         # Add client code content to zip
-        for path, sub_path in mapping:
-            zipf.write(path, sub_path)
+        for path in get_files_to_copy(CLIENT_DIR):
+            zipf.write(path)
 
     log.info("Client zip created")
 
-    pyproject_path = os.path.join(current_dir, "client", "pyproject.toml")
+    pyproject_path = CURRENT_DIR / "client" / "pyproject.toml"
     if os.path.exists(pyproject_path):
-        shutil.copy(pyproject_path, private_dir)
+        shutil.copy(pyproject_path, target / "private")
 
 
-def create_server_package(output_dir: str, addon_output_dir: str, log: logging.Logger):
-    """Create server package zip file.
+def copy_server_content(target: Path):
+    # ? do i need the frontend code here
+    target = target / "server"
+    log.debug(f"Copying server code --> {target}")
 
-    The zip file can be installed to a server using UI or rest api endpoints.
-
-    Args:
-        output_dir (str): Directory path to output zip file.
-        addon_output_dir (str): Directory path to addon output directory.
-        log (logging.Logger): Logger object.
-    """
-
-    log.info("Creating server package")
-    output_path = os.path.join(output_dir, f"{ADDON_NAME}-{ADDON_VERSION}.zip")
-
-    with ZipFileLongPaths(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        # Move addon content to zip into 'addon' directory
-        addon_output_dir_offset = len(addon_output_dir) + 1
-        for root, _, filenames in os.walk(addon_output_dir):
-            if not filenames:
-                continue
-
-            dst_root = None
-            if root != addon_output_dir:
-                dst_root = root[addon_output_dir_offset:]
-            for filename in filenames:
-                src_path = os.path.join(root, filename)
-                dst_path = filename
-                if dst_root:
-                    dst_path = os.path.join(dst_root, dst_path)
-                zipf.write(src_path, dst_path)
-
-    log.info(f"Output package can be found: {output_path}")
-
-
-def copy_client_code(current_dir: str, output_dir: str, log: logging.Logger):
-    """Copy client code to output directory.
-
-    Args:
-        current_dir (str): Directory path of addon source.
-        output_dir (str): Directory path to output client code.
-        log (logging.Logger): Logger object.
-    """
-
-    client_code_dir: str = _get_client_code_path(current_dir)
-    if not os.path.isdir(client_code_dir):
-        raise RuntimeError(f"Client directory '{client_code_dir}' was not found.")
-
-    full_output_dir = os.path.join(output_dir, ADDON_CLIENT_DIR)
-    if os.path.exists(full_output_dir):
-        shutil.rmtree(full_output_dir)
-
-    if os.path.exists(full_output_dir):
-        raise RuntimeError(f"Failed to remove target folder '{full_output_dir}'")
-
-    os.makedirs(output_dir, exist_ok=True)
-    _update_client_version(client_code_dir, log)
-    mapping = _get_client_zip_content(current_dir, log)
-    for src_path, dst_path in mapping:
-        full_dst_path = os.path.join(output_dir, dst_path)
-        os.makedirs(os.path.dirname(full_dst_path), exist_ok=True)
-        shutil.copy2(src_path, full_dst_path)
+    for file in get_files_to_copy(SERVER_DIR):
+        safe_copy_file(file, target / file.relative_to(SERVER_DIR))
 
 
 def main(
-    output_dir: Optional[str] = None,
+    target_dir: Optional[str],
     skip_zip: Optional[bool] = False,
     keep_sources: Optional[bool] = False,
     only_client: Optional[bool] = False,
 ):
-    log: logging.Logger = logging.getLogger("create_package")
-    log.info("Start creating package")
+    # validate target_root
+    target_root: Path
+    if not target_dir:
+        target_root = CURRENT_DIR / "build"
+    if not isinstance(target_root, Path):
+        target_root = Path(target_dir)
+    if not target_root:
+        raise RuntimeError(
+            "Output directory must be defined" " for client only preparation."
+        )
 
-    current_dir: str = os.path.dirname(os.path.abspath(__file__))
-    if not output_dir:
-        output_dir = os.path.join(current_dir, "package")
-
+    # copies client folder
     if only_client:
         log.info("Creating client folder")
-        if not output_dir:
-            raise RuntimeError(
-                "Output directory must be defined" " for client only preparation."
-            )
-        copy_client_code(current_dir, output_dir, log)
+        copy_client_content(target_root)
         log.info("Client folder created")
         return
 
-    addon_output_root: str = os.path.join(output_dir, ADDON_NAME)
-    addon_output_dir: str = os.path.join(addon_output_root, ADDON_VERSION)
-    if os.path.isdir(addon_output_dir):
-        log.info(f"Purging {addon_output_dir}")
-        shutil.rmtree(output_dir)
+    # build version addon root
+    target_package_root: Path = target_root / ADDON_NAME / ADDON_VERSION
+    if target_package_root.exists():
+        log.info(f"Purging {target_package_root}")
+        shutil.rmtree(target_package_root)
 
     log.info(f"Preparing package for {ADDON_NAME}-{ADDON_VERSION}")
 
-    if not os.path.exists(addon_output_dir):
-        os.makedirs(addon_output_dir)
+    if not target_package_root.exists():
+        target_package_root.mkdir(parents=True, exist_ok=True)
 
-    src_package_file = os.path.join(current_dir, "package.py")
-    dst_package_file = os.path.join(addon_output_dir, "package.py")
-
-    failed = True
     try:
-        safe_copy_file(src_package_file, dst_package_file)
-        copy_server_content(addon_output_dir, current_dir, log)
-        copy_frontend_content(addon_output_dir, current_dir, log)
-        zip_client_side(addon_output_dir, current_dir, log)
-        failed = False
+        # # copy package file
+        # copy_package_file(target_package_root)
+        # # copy server content
+        # copy_server_content(target_package_root)
+        # # copy frontend content
+        # copy_frontend_content(target_package_root)
+        # zip client code
+        zip_client_side(target_package_root)
+    except Exception as e:
+        log.error(f"Failed to prepare package: {e}")
+        raise
     finally:
-        if failed and os.path.isdir(addon_output_dir):
-            log.info("Purging output dir after failed package creation")
-            shutil.rmtree(output_dir)
+        pass
+        # # cleanup after build
+        # target_package: Path = target_root / ADDON_NAME / ADDON_VERSION
+        # if target_root.is_dir():
+        #     log.info(f"Purging {target_package}")
+        #     shutil.rmtree(target_package)
 
-    # Skip server zipping
     if not skip_zip:
-        create_server_package(output_dir, addon_output_dir, log)
-        # Remove sources only if zip file is created
-        if not keep_sources:
-            log.info("Removing source files for server package")
-            shutil.rmtree(addon_output_root)
-    log.info("Package creation finished")
+        # create server package
+        # create_server_package(target, target_package_root)
+        pass
 
 
 if __name__ == "__main__":
