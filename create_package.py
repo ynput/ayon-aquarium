@@ -257,7 +257,7 @@ def main(
     # validate target_root
     target_root: Path
     if not target_dir:
-        target_root = CURRENT_DIR / "build"
+        target_root = CURRENT_DIR / "package"
     if not isinstance(target_root, Path):
         target_root = Path(target_dir)
     if not target_root:
