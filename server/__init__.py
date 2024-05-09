@@ -39,13 +39,6 @@ from .routes.events import get_event
 
 from .vendors.aquarium import Aquarium, DEFAULT_STATUSES
 
-try:
-    from .version import __version__  # type: ignore
-except ModuleNotFoundError:
-    # temporary solution for local development
-    # version is pushed from package.py in ayon >= 1.0.3
-    __version__ = "0.0.0"
-
 
 class AquariumAddon(BaseServerAddon):
     """
@@ -56,16 +49,9 @@ class AquariumAddon(BaseServerAddon):
     FIXME: Build dependency, to remove vendors folder
     """
 
-    name = "aquarium"
-    title = "Aquarium"
-    version = __version__
     settings_model: Type[AquariumSettings] = AquariumSettings
     frontend_scopes = {
         "settings": {},
-    }
-    services = {
-        "leecher": {"image": f"ynput/ayon-aquarium-leecher:{__version__}"},
-        "processor": {"image": f"ynput/ayon-aquarium-processor:{__version__}"},
     }
 
     bot_key: str
