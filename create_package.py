@@ -127,8 +127,10 @@ def get_files_to_copy(search_path: Path):
         if file.is_file():
             if _value_match_regexes(file.name, IGNORE_FILE_PATTERNS):
                 continue
-
+            if file.name == f"{ADDON_NAME}-{ADDON_VERSION}.zip":
+                continue
             result.add(file)
+
     return result
 
 
