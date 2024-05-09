@@ -73,6 +73,8 @@ IGNORE_FILE_PATTERNS: list[Pattern] = [
     }
 ]
 
+log = logging.getLogger(__name__)
+
 
 class ZipFileLongPaths(zipfile.ZipFile):
     """Allows longer paths in zip files.
@@ -94,9 +96,6 @@ class ZipFileLongPaths(zipfile.ZipFile):
                 tpath = "\\\\?\\" + tpath
 
         return super(ZipFileLongPaths, self)._extract_member(member, tpath, pwd)
-
-
-log = logging.getLogger(__name__)
 
 
 def safe_copy_file(src: Path, dst: Path):
