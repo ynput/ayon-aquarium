@@ -240,20 +240,10 @@ def create_server_package(target: Path):
 
     with ZipFileLongPaths(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         # Move addon content to zip into 'addon' directory
-        addon_output_dir_offset = len(CURRENT_DIR.parts) + 1
-        for root, _, filenames in os.walk(CURRENT_DIR):
-            if not filenames:
-                continue
-
-            dst_root = None
-            if root != CURRENT_DIR:
-                dst_root = root[addon_output_dir_offset:]
-            for filename in filenames:
-                src_path = os.path.join(root, filename)
-                dst_path = filename
-                if dst_root:
-                    dst_path = os.path.join(dst_root, dst_path)
-                zipf.write(src_path, dst_path)
+        for file in get_files_to_copy(target):
+            if file.is_file():
+                log.debug(f"{file.stem = }")
+                zipf.write(file, file.relative_to(target / ADDON_NAME / ADDON_VERSION))
 
     log.info(f"Output package can be found: {output_path}")
 
@@ -315,7 +305,7 @@ def main(
 
     if not skip_zip:
         # create server package
-        create_server_package(target_package_root)
+        create_server_package(target_root)
         # pass
 
 
