@@ -132,23 +132,6 @@ def get_files_to_copy(search_path: Path):
     return result
 
 
-def copy_client_content(target: Path):
-    # log.debug(f"Copying client code --> {target}")
-
-    if target.is_dir():
-        shutil.rmtree(target)
-
-    # recreate target folder
-    if target.exists():
-        raise RuntimeError(f"Failed to remove target folder '{target}'")
-    target.mkdir(parents=True, exist_ok=True)
-
-    update_client_version()
-
-    for file in get_files_to_copy(CLIENT_DIR):
-        safe_copy_file(file, target / file.relative_to(CLIENT_DIR))
-
-
 def copy_package_file(target: Path):
     log.debug("Copying package file")
     safe_copy_file(CURRENT_DIR / "package.py", target / "package.py")
@@ -197,7 +180,24 @@ def copy_frontend_content(target: Path):
         safe_copy_file(file, target / Path(*file.relative_to(CURRENT_DIR).parts[3:]))
 
 
-def zip_client_side(target: Path):
+def copy_client_content(target: Path):
+    # log.debug(f"Copying client code --> {target}")
+
+    if target.is_dir():
+        shutil.rmtree(target)
+
+    # recreate target folder
+    if target.exists():
+        raise RuntimeError(f"Failed to remove target folder '{target}'")
+    target.mkdir(parents=True, exist_ok=True)
+
+    update_client_version()
+
+    for file in get_files_to_copy(CLIENT_DIR):
+        safe_copy_file(file, file.relative_to(CURRENT_DIR / "client"))
+
+
+def zip_client_content(target: Path):
     zip_filepath: Path = target / "private" / "client.zip"
     if not zip_filepath.parent.exists():
         zip_filepath.parent.mkdir(parents=True, exist_ok=True)
