@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aquarium-leecher"
-version = "0.0.3"
+version = "0.0.4-dev.1"
 description = "Aquarium event listener"
 authors = ["Fatfish Lab <hello@fatfi.sh>"]
 

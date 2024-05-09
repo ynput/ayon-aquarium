@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aquarium-processor"
-version = "0.0.3"
+version = "0.0.4-dev.1"
 description = "Aquarium event processor"
 authors = ["Fatfish Lab <hello@fatfi.sh>"]
 
