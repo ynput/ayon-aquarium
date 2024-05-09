@@ -299,7 +299,7 @@ def main(
         # copy frontend content
         copy_frontend_content(target_package_root)
         # zip client code
-        zip_client_side(target_package_root)
+        zip_client_content(target_package_root)
     except Exception as e:
         log.error(f"Failed to prepare package: {e}")
         raise
