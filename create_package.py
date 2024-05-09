@@ -204,7 +204,7 @@ def zip_client_side(target: Path):
     with ZipFileLongPaths(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
         # Add client code content to zip
         for path in get_files_to_copy(CLIENT_DIR):
-            zipf.write(path)
+            zipf.write(path, path.relative_to(CURRENT_DIR / "client"))
 
     log.info("Client zip created")
 
