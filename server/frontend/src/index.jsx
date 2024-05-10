@@ -38,10 +38,10 @@ const MainContainer = styled.div`
 
 const App = () => {
   const accessToken = useContext(AddonContext).accessToken
-//   const addonName = useContext(AddonContext).addonName
-//   const addonVersion = useContext(AddonContext).addonVersion
-  const addonName = 'aquarium' // For development
-  const addonVersion = '0.0.3+git'  // For development
+  const addonName = useContext(AddonContext).addonName
+  const addonVersion = useContext(AddonContext).addonVersion
+//   const addonName = 'aquarium' // For development
+//   const addonVersion = '0.0.4+git'  // For development
   const [tokenSet, setTokenSet] = useState(false)
 
   useEffect(() =>{
