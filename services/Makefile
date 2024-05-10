@@ -1,6 +1,6 @@
 AYON_ADDON_NAME=$(shell python -c "import os;import sys;content={};f=open('$(CURDIR)/../package.py');exec(f.read(),content);f.close();print(content['name'])")
 AYON_ADDON_VERSION=$(shell python -c "import os;import sys;content={};f=open('$(CURDIR)/../package.py');exec(f.read(),content);f.close();print(content['version'])")
-SERVICE := $(error Please specify the service to build with 'SERVICE', for example: 'make build SERVICE=leecher')
+SERVICE = $(error Please specify the service to build with 'SERVICE', for example: 'make build SERVICE=leecher')
 IMAGE := ynput/ayon-aquarium-$(SERVICE):$(AYON_ADDON_VERSION)
 
 
