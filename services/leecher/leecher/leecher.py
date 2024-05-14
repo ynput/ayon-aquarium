@@ -50,6 +50,7 @@ def main():
     connect_to_ayon()
     register_signals(_AQS)
 
+    supported_events: Set = ALLOWED_AQ_TOPICS - IGNORED_AQ_TOPICS
     while not _AQS.connected:
         _AQS.connect()
         if _AQS.connected is False:
@@ -60,5 +61,7 @@ def main():
         _AQS.listen()
 
         if _AQS.listener is not None:
-            _AQS.listener.subscribe("*", callback)
+            for event in supported_events:
+                log.info(f"Subscribing to {event}")
+                _AQS.listener.subscribe(event, callback)
             _AQS.listener.start()
