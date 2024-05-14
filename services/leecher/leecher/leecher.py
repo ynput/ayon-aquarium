@@ -23,17 +23,43 @@ def create_event_description(event):
 
 
 def callback(event):
-    """Callback function for Aquarium event listener."""
-    if event.topic in IGNORED_AQ_TOPICS:
-        log.info(f"Event topic ignored: {event.topic}")
+    """Callback function for Aquarium event listener.
+    Checks the event data for item, gets corresponding project, then dispatches an event to Ayon.
+    """
+
+    # get aq item from event
+    event_data = event.to_dict()
+    item = event_data["data"].get("item")
+    item_key = item.get("_id")
+    if not all([item, item_key]):
+        log.error(f"Can't retrieve Aquarium item from event: {event_data}")
+        return
+    aq_item = _AQS.aq.cast(item)
+
+    # get project from item
+    query = "# <($Child, 5)- item.type == 'Project'"
+    projects: List[dict] = aq_item.traverse(meshql=query)
+    if len(projects) > 1:
+        log.error(f"More than one project found for item: {item_key}")
+        return
+    if len(projects) == 0:
+        log.error(f"No project found for item: {item_key}")
+        return
+    aq_project = _AQS.aq.cast(projects[0].get("item"))
+    aq_project = aq_project.to_dict()  # convert to dict for easier access
+
+    # check if project is in Ayon
+    if not aq_project.get("data").get("ayonProjectName"):
+        log.warning(
+            f"Project {aq_project['data']['name']} is not set up to track with Ayon"
+        )
         return
 
-    if event.topic not in ALLOWED_AQ_TOPICS:
-        log.info(f"Event topic not allowed: {event.topic}")
-        return
+    ay_project = ayon_api.get_project(aq_project["data"]["ayonProjectName"])
 
     if ayon_api.dispatch_event(
         "aquarium.leech",
+        project_name=ay_project["name"],  # why u no work?
         sender=ayon_api.ServiceContext.service_name,
         event_hash=event._key,
         description=create_event_description(event),
