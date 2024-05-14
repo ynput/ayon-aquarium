@@ -18,7 +18,7 @@ from ayon_api import (
 log = logging.getLogger(__name__)
 
 
-IGNORED_AQ_TOPICS: set = {}
+IGNORED_AQ_TOPICS: set = set()
 ALLOWED_AQ_TOPICS: set = {
     "item.created.Asset",
     "item.updated.Asset",
