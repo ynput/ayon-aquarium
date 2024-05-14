@@ -1,13 +1,7 @@
-import sys
 import time
-import signal
 import logging
-import threading
-import traceback
-from typing import Any, Optional, Union
+from typing import List, Set
 
-from aquarium import Aquarium
-from aquarium import exceptions
 
 from aquarium_common import (
     AquariumServices,
