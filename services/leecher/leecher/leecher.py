@@ -1,6 +1,6 @@
 import time
 import logging
-from typing import List, Set
+from typing import Any, Dict, Set
 
 
 from aquarium_common import (
@@ -26,29 +26,12 @@ def callback(event):
     """Callback function for Aquarium event listener.
     Checks the event data for item, gets corresponding project, then dispatches an event to Ayon.
     """
-
-    # get aq item from event
-    event_data = event.to_dict()
-    item = event_data["data"].get("item")
-    item_key = item.get("_id")
-    if not all([item, item_key]):
-        log.error(f"Can't retrieve Aquarium item from event: {event_data}")
-        return
-    aq_item = _AQS.aq.cast(item)
+    context: Dict[str, Any] = event.get_context()
 
     # get project from item
-    query = "# <($Child, 5)- item.type == 'Project'"
-    projects: List[dict] = aq_item.traverse(meshql=query)
-    if len(projects) > 1:
-        log.error(f"More than one project found for item: {item_key}")
-        return
-    if len(projects) == 0:
-        log.error(f"No project found for item: {item_key}")
-        return
-    aq_project = _AQS.aq.cast(projects[0].get("item"))
-    aq_project = aq_project.to_dict()  # convert to dict for easier access
+    aq_project = context.get("project").to_dict()
 
-    # check if project is in Ayon
+    # check if project is tracked in Ayon
     if not aq_project.get("data").get("ayonProjectName"):
         log.warning(
             f"Project {aq_project['data']['name']} is not set up to track with Ayon"
