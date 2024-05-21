@@ -10,6 +10,7 @@ else
 endif
 
 build:
+
 	cp -r ./common/ ./$(SERVICE)/aquarium_common
 	sed $(SED_INPLACE) '/^\[tool.poetry\]/,/^\[/ s/^version = .*/version = "$(AYON_ADDON_VERSION)"/' $(SERVICE)/pyproject.toml
 	docker build -t $(IMAGE) ./$(SERVICE)
