@@ -3,10 +3,15 @@ AYON_ADDON_VERSION=$(shell python -c "import os;import sys;content={};f=open('$(
 SERVICE = $(error Please specify the service to build with 'SERVICE', for example: 'make build SERVICE=leecher')
 IMAGE := ynput/ayon-aquarium-$(SERVICE):$(AYON_ADDON_VERSION)
 
+ifeq ($(shell uname -s),Darwin)
+	SED_INPLACE = -i ''
+else
+	SED_INPLACE = -i
+endif
 
 build:
 	cp -r ./common/ ./$(SERVICE)/aquarium_common
-	sed -i '/^\[tool.poetry\]/,/^\[/ s/^version = .*/version = "$(AYON_ADDON_VERSION)"/' $(SERVICE)/pyproject.toml
+	sed $(SED_INPLACE) '/^\[tool.poetry\]/,/^\[/ s/^version = .*/version = "$(AYON_ADDON_VERSION)"/' $(SERVICE)/pyproject.toml
 	docker build -t $(IMAGE) ./$(SERVICE)
 
 clean:
