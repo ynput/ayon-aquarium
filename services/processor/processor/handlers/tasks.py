@@ -21,8 +21,7 @@ def sync_task(processor: "AquariumProcessor", event):
     """Send sync request to Aquarium addon API."""
     context = event.get_context()
     aqTask = context["path"][0]
-    # FIXME: Change to context['project'] on next aquarium-python-api release
-    aqProject = context["path"][-1]
+    aqProject = context["project"]
 
     project_name = processor.get_paired_ayon_project(aqProject._key)
     if not project_name:

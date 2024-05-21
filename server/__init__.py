@@ -12,32 +12,33 @@ from ayon_server.secrets import Secrets
 from .settings import AquariumSettings
 
 from .routes.pairing import (
-    get_paired_projects, ProjectPaired,
-    pair_ayon_project, ProjectsPairRequest,
-    create_ayon_project, create_aquarium_project, ProjectsCreateRequest,
-    unpair_project)
+    get_paired_projects,
+    ProjectPaired,
+    pair_ayon_project,
+    ProjectsPairRequest,
+    create_ayon_project,
+    create_aquarium_project,
+    ProjectsCreateRequest,
+    unpair_project,
+)
 
 from .routes.sync import (
     trigger_sync_project,
-    sync_project, SyncProjectRequest,
-    sync_folder, SyncFolderRequest,
-    sync_task, SyncTaskRequest)
-
-from .routes.anatomy import (
-    get_aquarium_project_anatomy, ProjectAttribModel
+    sync_project,
+    SyncProjectRequest,
+    sync_folder,
+    SyncFolderRequest,
+    sync_task,
+    SyncTaskRequest,
 )
+
+from .routes.anatomy import get_aquarium_project_anatomy, ProjectAttribModel
 
 from .routes.events import get_event
 
 
 from .vendors.aquarium import Aquarium, DEFAULT_STATUSES
 
-try:
-    from .version import __version__ # type: ignore
-except ModuleNotFoundError:
-    # temporary solution for local development
-    # version is pushed from package.py in ayon >= 1.0.3
-    __version__ = "0.0.0"
 
 class AquariumAddon(BaseServerAddon):
     """
@@ -47,16 +48,10 @@ class AquariumAddon(BaseServerAddon):
 
     FIXME: Build dependency, to remove vendors folder
     """
-    name = "aquarium"
-    title = "Aquarium"
-    version = __version__
+
     settings_model: Type[AquariumSettings] = AquariumSettings
     frontend_scopes = {
         "settings": {},
-    }
-    services = {
-        "leecher": {"image": f"ynput/ayon-aquarium-leecher:{__version__}"},
-        "processor": {"image": f"ynput/ayon-aquarium-processor:{__version__}"}
     }
 
     bot_key: str
@@ -71,12 +66,32 @@ class AquariumAddon(BaseServerAddon):
         self.add_endpoint("/projects/pair", self.GET_projects_paired, method="GET")
         self.add_endpoint("/projects/pair", self.POST_projects_pair, method="POST")
         self.add_endpoint("/projects", self.POST_projects_create, method="POST")
-        self.add_endpoint("/projects/{project_name}/pair", self.DELETE_projects_pair, method="DELETE")
-        self.add_endpoint("/projects/{project_name}/sync", self.POST_projects_sync, method="POST")
-        self.add_endpoint("/projects/{project_name}/sync/all", self.POST_projects_sync_all, method="POST")
-        self.add_endpoint("/projects/{project_name}/sync/folder", self.POST_projects_sync_folder, method="POST")
-        self.add_endpoint("/projects/{project_name}/sync/task", self.POST_projects_sync_task, method="POST")
-        self.add_endpoint("/projects/{project_name}/anatomy/attributes", self.GET_anatomy_attributes, method="GET")
+        self.add_endpoint(
+            "/projects/{project_name}/pair", self.DELETE_projects_pair, method="DELETE"
+        )
+        self.add_endpoint(
+            "/projects/{project_name}/sync", self.POST_projects_sync, method="POST"
+        )
+        self.add_endpoint(
+            "/projects/{project_name}/sync/all",
+            self.POST_projects_sync_all,
+            method="POST",
+        )
+        self.add_endpoint(
+            "/projects/{project_name}/sync/folder",
+            self.POST_projects_sync_folder,
+            method="POST",
+        )
+        self.add_endpoint(
+            "/projects/{project_name}/sync/task",
+            self.POST_projects_sync_task,
+            method="POST",
+        )
+        self.add_endpoint(
+            "/projects/{project_name}/anatomy/attributes",
+            self.GET_anatomy_attributes,
+            method="GET",
+        )
         self.add_endpoint("/events/{event_id}", self.GET_event, method="GET")
 
         logging.info("Aquarium addon initialized.")
@@ -93,7 +108,9 @@ class AquariumAddon(BaseServerAddon):
         return await get_paired_projects(self)
 
     # POST /projects
-    async def POST_projects_create(self, user: CurrentUser, request: ProjectsCreateRequest) -> EmptyResponse:
+    async def POST_projects_create(
+        self, user: CurrentUser, request: ProjectsCreateRequest
+    ) -> EmptyResponse:
         if not user.is_manager:
             raise ForbiddenException("Only managers can create projects")
 
@@ -105,7 +122,9 @@ class AquariumAddon(BaseServerAddon):
         return EmptyResponse(status_code=201)
 
     # POST /projects/pair
-    async def POST_projects_pair(self, user: CurrentUser, request: ProjectsPairRequest) -> EmptyResponse:
+    async def POST_projects_pair(
+        self, user: CurrentUser, request: ProjectsPairRequest
+    ) -> EmptyResponse:
         if not user.is_manager:
             raise ForbiddenException("Only managers can pair projects")
 
@@ -114,7 +133,9 @@ class AquariumAddon(BaseServerAddon):
         return EmptyResponse(status_code=201)
 
     # DELETE /projects/pair
-    async def DELETE_projects_pair(self, user: CurrentUser, project_name: ProjectName) -> EmptyResponse:
+    async def DELETE_projects_pair(
+        self, user: CurrentUser, project_name: ProjectName
+    ) -> EmptyResponse:
         if not user.is_manager:
             raise ForbiddenException("Only managers can unpair Aquarium projects")
 
@@ -123,26 +144,36 @@ class AquariumAddon(BaseServerAddon):
         return EmptyResponse(status_code=201)
 
     # POST /projects/{project_name}/sync
-    async def POST_projects_sync(self, user: CurrentUser, project_name: ProjectName) -> str:
+    async def POST_projects_sync(
+        self, user: CurrentUser, project_name: ProjectName
+    ) -> str:
         if not user.is_manager:
             raise ForbiddenException("Only managers can sync Aquarium projects")
 
         return await trigger_sync_project(self, project_name, user)
 
     # POST /projects/{project_name}/sync/all
-    async def POST_projects_sync_all(self, user: CurrentUser, project_name: ProjectName, request: SyncProjectRequest) -> str:
+    async def POST_projects_sync_all(
+        self, user: CurrentUser, project_name: ProjectName, request: SyncProjectRequest
+    ) -> str:
         return await sync_project(self, project_name, user, request)
 
     # POST /projects/{project_name}/sync/folder
-    async def POST_projects_sync_folder(self, user: CurrentUser, project_name: ProjectName, request: SyncFolderRequest) -> str:
+    async def POST_projects_sync_folder(
+        self, user: CurrentUser, project_name: ProjectName, request: SyncFolderRequest
+    ) -> str:
         return await sync_folder(self, project_name, user, request)
 
     # POST /projects/{project_name}/sync/task
-    async def POST_projects_sync_task(self, user: CurrentUser, project_name: ProjectName, request: SyncTaskRequest) -> str:
+    async def POST_projects_sync_task(
+        self, user: CurrentUser, project_name: ProjectName, request: SyncTaskRequest
+    ) -> str:
         return await sync_task(self, project_name, user, request)
 
     # GET /projects/{project_name}/anatomy/attributes
-    async def GET_anatomy_attributes(self, project_name: ProjectName) -> ProjectAttribModel:
+    async def GET_anatomy_attributes(
+        self, project_name: ProjectName
+    ) -> ProjectAttribModel:
         await self.connect_aquarium()
         anatomy = await get_aquarium_project_anatomy(self, project_name)
         return anatomy.attributes
@@ -153,7 +184,6 @@ class AquariumAddon(BaseServerAddon):
             raise ForbiddenException("Only managers can get event details")
 
         return await get_event(self, user, event_id)
-
 
     async def setup(self):
         pass
@@ -174,14 +204,14 @@ class AquariumAddon(BaseServerAddon):
         Return Aquarium settings from the database.
         Function created to improve typing.
         """
-        return await self.get_studio_settings() # type: ignore
+        return await self.get_studio_settings()  # type: ignore
 
     async def connect_aquarium(self, mock: bool = False):
         """
         Signin addon to Aquarium server using Ayon settings.
         """
 
-        if self.aq.token is not None and self.aq.token != '':
+        if self.aq.token is not None and self.aq.token != "":
             return
 
         if mock is True:

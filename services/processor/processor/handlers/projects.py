@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, List, Dict, Any
 import ayon_api
 import logging
 from uuid import uuid4
-from copy import deepcopy, copy
+from copy import deepcopy
 from functools import reduce
 
 from .utils import ayonise_folder, ayonise_task
@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 def updated(processor: "AquariumProcessor", event):
+    if event.data.item is None:
+        return
+
     log.info(f"Update projet {event.data.item.data.name}")
     projectKey = event.data.item._key
     project_name = processor.get_paired_ayon_project(projectKey)
@@ -156,7 +159,7 @@ def create(processor: "AquariumProcessor", aquariumProjectName: str, ayonProject
             if hasattr(item, 'children'):
                 flatten(item.children, _to)
 
-    log.info(f"Flattening hierarchy...")
+    log.info("Flattening hierarchy...")
     flatten(items, 0)
 
     # DEBUG: Write JSON to file
@@ -282,7 +285,7 @@ def convert_hierarchy(hierarchy):
             createdFrom=createdFrom,
             children=tasks)
 
-        if (entity["parentId"] == None):
+        if (entity["parentId"] is None):
             items.append(item)
         else:
             parent = find_parent(items, entity["parentId"])

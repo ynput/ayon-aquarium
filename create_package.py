@@ -173,22 +173,6 @@ def find_files_in_subdir(
     return output
 
 
-def _get_yarn_executable():
-    cmd = "which"
-    if platform.system().lower() == "windows":
-        cmd = "where"
-
-    for line in subprocess.check_output([cmd, "yarn"], encoding="utf-8").split():
-        if not line or not os.path.exists(line):
-            continue
-        try:
-            subprocess.call([line, "--version"])
-            return line
-        except OSError:
-            continue
-    return None
-
-
 def copy_server_content(addon_output_dir: str, current_dir: str, log: logging.Logger):
     """Copies server side folders to 'addon_package_dir'
 
@@ -221,7 +205,7 @@ def copy_server_content(addon_output_dir: str, current_dir: str, log: logging.Lo
 def copy_frontend_content(addon_output_dir: str, current_dir: str, log: logging.Logger):
     filepaths_to_copy: list[tuple[str, str]] = []
 
-    frontend_dirpath: str = os.path.join(current_dir, "frontend")
+    frontend_dirpath: str = os.path.join(current_dir, "server", "frontend")
     if not os.path.exists(frontend_dirpath):
         log.info("Frontend directory was not found. Skipping")
         return
@@ -231,12 +215,24 @@ def copy_frontend_content(addon_output_dir: str, current_dir: str, log: logging.
     if os.path.exists(os.path.join(frontend_dirpath, "package.json")):
         # if package.json exists, we assume that frontend is a node project
         # and we need to build it
-        yarn_executable = _get_yarn_executable()
-        if yarn_executable is None:
-            raise RuntimeError("Yarn executable was not found.")
+        executable = shutil.which("npm") or shutil.which("yarn")
 
-        subprocess.run([yarn_executable, "install"], cwd=frontend_dirpath)
-        subprocess.run([yarn_executable, "build"], cwd=frontend_dirpath)
+        if executable is None:
+            raise RuntimeError("npm and yarn executable was not found.")
+
+        install_command = [executable, "install"]
+        build_command = [executable, "build"]
+
+        if "npm" in executable:
+            build_command.insert(1, "run")
+            install_command[1] = "ci"
+        elif "yarn" in executable:
+            subprocess.run(
+                [executable, "import"], cwd=frontend_dirpath
+            )  # Convert package-lock.json to yarn.lock
+
+        subprocess.run(install_command, cwd=frontend_dirpath)
+        subprocess.run(build_command, cwd=frontend_dirpath)
 
     if not os.path.isdir(frontend_dirpath):
         raise RuntimeError("Frontend dist directory not found.")
@@ -274,9 +270,7 @@ def _update_client_version(current_dir, log):
         return
 
     with open(version_file, "w") as stream:
-        stream.write(
-            CLIENT_VERSION_CONTENT.format(ADDON_NAME, ADDON_VERSION)
-        )
+        stream.write(CLIENT_VERSION_CONTENT.format(ADDON_NAME, ADDON_VERSION))
     log.info(f"Client 'version.py' updated to '{ADDON_VERSION}'")
 
 
@@ -291,7 +285,6 @@ def _get_client_zip_content(current_dir: str, log: logging.Logger):
         list[tuple[str, str]]: List of path mappings to copy. The destination
             path is relative to expected output directory.
     """
-
 
     log.info("Preparing client code zip")
 
@@ -319,9 +312,7 @@ def zip_client_side(addon_package_dir: str, current_dir: str, log: logging.Logge
 
     client_code_dir: str = _get_client_code_path(current_dir)
     if not os.path.isdir(client_code_dir):
-        raise RuntimeError(
-            f"Client directory was not found '{client_code_dir}'."
-        )
+        raise RuntimeError(f"Client directory was not found '{client_code_dir}'.")
 
     log.info("Preparing client code zip")
     private_dir: str = os.path.join(addon_package_dir, "private")
@@ -390,9 +381,7 @@ def copy_client_code(current_dir: str, output_dir: str, log: logging.Logger):
 
     client_code_dir: str = _get_client_code_path(current_dir)
     if not os.path.isdir(client_code_dir):
-        raise RuntimeError(
-            f"Client directory '{client_code_dir}' was not found."
-        )
+        raise RuntimeError(f"Client directory '{client_code_dir}' was not found.")
 
     full_output_dir = os.path.join(output_dir, ADDON_CLIENT_DIR)
     if os.path.exists(full_output_dir):
