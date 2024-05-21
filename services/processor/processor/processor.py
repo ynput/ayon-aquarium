@@ -30,12 +30,13 @@ from .handlers import (
 log = logging.getLogger(__name__)
 _AQS = AquariumServices()
 
+
 # Aquarium processor class
-class AquariumProcessor():
+class AquariumProcessor:
     """
-        Aquarium processor is responsible for processing events from the leecher
-        with the appropriate handler. The processor is also responsible for transforming
-        Aquarium structure to Ayon structure. The "Ayonisation" is done in the handlers.
+    Aquarium processor is responsible for processing events from the leecher
+    with the appropriate handler. The processor is also responsible for transforming
+    Aquarium structure to Ayon structure. The "Ayonisation" is done in the handlers.
     """
 
     _events_queue = queue.Queue()
@@ -61,24 +62,28 @@ class AquariumProcessor():
     def get_next_aquarium_event(self):
         """Full project sync is prioritized over other events."""
 
-        return enroll_event_job(
-            source_topic="aquarium.sync_project",
-            target_topic="aquarium.process",
-            sender=get_service_addon_name(),
-            description="Processing sync project",
-            sequential=True
-        ) or enroll_event_job(
-            source_topic="aquarium.project_create",
-            target_topic="aquarium.process",
-            sender=get_service_addon_name(),
-            description="Processing create Aquarium project",
-            sequential=True
-        ) or enroll_event_job(
-            source_topic="aquarium.leech",
-            target_topic="aquarium.process",
-            sender=get_service_addon_name(),
-            description="Event processing",
-            sequential=True
+        return (
+            enroll_event_job(
+                source_topic="aquarium.sync_project",
+                target_topic="aquarium.process",
+                sender=get_service_addon_name(),
+                description="Processing sync project",
+                sequential=True,
+            )
+            or enroll_event_job(
+                source_topic="aquarium.project_create",
+                target_topic="aquarium.process",
+                sender=get_service_addon_name(),
+                description="Processing create Aquarium project",
+                sequential=True,
+            )
+            or enroll_event_job(
+                source_topic="aquarium.leech",
+                target_topic="aquarium.process",
+                sender=get_service_addon_name(),
+                description="Event processing",
+                sequential=True,
+            )
         )
 
     def load_event_from_jobs(self):
@@ -134,35 +139,41 @@ class AquariumProcessor():
         # QUESTION: Does the events need to trigger a full patch or a partial one ?
         # For example an updated event only sync updated data or all data ?
         # TODO: Users are not synced yet. Need to be checked with users before.
-        if ayonTopic == 'aquarium.sync_project':
-            projects.sync(self, rawEvent["payload"]['aquariumProjectKey'], job.get('dependsOn', ''))
-        if ayonTopic == 'aquarium.project_create':
-            projects.create(self, rawEvent["payload"]['aquariumProjectName'], rawEvent["project"])
-        elif ayonTopic == 'aquarium.leech':
+        if ayonTopic == "aquarium.sync_project":
+            projects.sync(
+                self,
+                rawEvent["payload"]["aquariumProjectKey"],
+                job.get("dependsOn", ""),
+            )
+        if ayonTopic == "aquarium.project_create":
+            projects.create(
+                self, rawEvent["payload"]["aquariumProjectName"], rawEvent["project"]
+            )
+        elif ayonTopic == "aquarium.leech":
             event = self._AQS.aq.event(rawEvent["payload"])
-            if event.topic == 'item.updated.Project':
+            if event.topic == "item.updated.Project":
                 projects.updated(self, event)
-            elif event.topic == 'item.created.Asset':
+            elif event.topic == "item.created.Asset":
                 assets.created(self, event)
-            elif event.topic == 'item.updated.Asset':
+            elif event.topic == "item.updated.Asset":
                 assets.updated(self, event)
-            elif event.topic == 'item.created.Shot':
+            elif event.topic == "item.created.Shot":
                 shots.created(self, event)
-            elif event.topic == 'item.updated.Shot':
+            elif event.topic == "item.updated.Shot":
                 shots.updated(self, event)
-            elif event.topic == 'item.created.Sequence':
+            elif event.topic == "item.created.Sequence":
                 sequences.created(self, event)
-            elif event.topic == 'item.updated.Sequence':
+            elif event.topic == "item.updated.Sequence":
                 sequences.updated(self, event)
-            elif event.topic == 'item.created.Episode':
+            elif event.topic == "item.created.Episode":
                 episodes.created(self, event)
-            elif event.topic == 'item.updated.Episode':
+            elif event.topic == "item.updated.Episode":
                 episodes.updated(self, event)
-            elif event.topic == 'item.created.Task':
+            elif event.topic == "item.created.Task":
                 tasks.created(self, event)
-            elif event.topic == 'item.updated.Task':
+            elif event.topic == "item.updated.Task":
                 tasks.updated(self, event)
-            elif event.topic == 'user.assigned' or event.topic == 'user.unassigned':
+            elif event.topic == "user.assigned" or event.topic == "user.unassigned":
                 tasks.assigned(self, event)
 
     def set_job_processing(self, job):
@@ -224,6 +235,6 @@ def main():
             continue
 
         _AQS.session_fail_logged = False
-        _AQS.processor = AquariumProcessor(_AQS) # type: ignore
+        _AQS.processor = AquariumProcessor(_AQS)  # type: ignore
 
         _AQS.processor.wait()
