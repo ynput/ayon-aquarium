@@ -390,8 +390,6 @@ def main(
     log: logging.Logger = logging.getLogger("create_package")
     log.info("Start creating package")
 
-    output_dir: str = get_output_dir(output_dir)
-
     # Update client version file with version from 'package.py'
     client_version_file = os.path.join(
         CURRENT_DIR, "client", ADDON_CLIENT_DIR, "version.py"
@@ -403,7 +401,7 @@ def main(
         log.info("Creating client folder")
         if not output_dir:
             raise RuntimeError(
-                "Output directory must be defined" 
+                "Output directory must be defined"
                 " for client only preparation."
             )
         copy_client_code(output_dir, log)
@@ -429,7 +427,7 @@ def main(
         failed = False
     finally:
         if failed and os.path.isdir(addon_output_dir):
-            log.info(f"Purging output dir after failed package creation")
+            log.info("Purging output dir after failed package creation")
             shutil.rmtree(output_dir)
 
     # Skip server zipping
