@@ -201,38 +201,57 @@ def _get_yarn_executable():
         except OSError:
             continue
     return None
-
-
-def copy_server_content(addon_output_dir: str, log: logging.Logger):
-    """Copies server side folders to 'addon_package_dir'
-
-    Args:
-        addon_output_dir (str): Output directory path.
-        log (logging.Logger)
-    """
-
-    log.info("Copying server content")
+def copy_frontend_content(addon_output_dir: str, log: logging.Logger):
+    log.info("Copying frontend content")
 
     filepaths_to_copy: list[tuple[str, str]] = []
 
     frontend_dirpath: str = os.path.join(CURRENT_DIR, "frontend")
-    frontend_dist_dirpath: str = os.path.join(frontend_dirpath, "dist")
-    yarn_executable = _get_yarn_executable()
-    if yarn_executable is None:
-        raise RuntimeError("Yarn executable was not found.")
-
-    subprocess.run([yarn_executable, "install"], cwd=frontend_dirpath)
-    subprocess.run([yarn_executable, "build"], cwd=frontend_dirpath)
     if not os.path.exists(frontend_dirpath):
-        raise RuntimeError(
-            "Build frontend first with `yarn install && yarn build`"
-        )
+        log.info("Frontend directory was not found. Skipping")
+        return
+
+    frontend_dist_dirpath: str = os.path.join(frontend_dirpath, "dist")
+    if os.path.exists(os.path.join(frontend_dirpath, "package.json")):
+        # if package.json exists, we assume that frontend is a node project
+        # and we need to build it
+        executable = shutil.which("npm") or shutil.which("yarn")
+
+        if executable is None:
+            raise RuntimeError("npm and yarn executable was not found.")
+
+        install_command = [executable, "install"]
+        build_command = [executable, "build"]
+
+        if "npm" in executable:
+            build_command.insert(1, "run")
+            install_command[1] = "ci"
+        elif "yarn" in executable:
+            subprocess.run(
+                [executable, "import"], cwd=frontend_dirpath
+            )  # Convert package-lock.json to yarn.lock
+
+        subprocess.run(install_command, cwd=frontend_dirpath)
+        subprocess.run(build_command, cwd=frontend_dirpath)
+
+
+    if not os.path.exists(frontend_dirpath):
+        raise RuntimeError("Frontend dist directory is not found. Try to run command manualy `npm ci && npm run build` or `yarn install && yarn build`")
 
     for item in find_files_in_subdir(frontend_dist_dirpath):
         src_path, dst_subpath = item
         filepaths_to_copy.append(
             (src_path, os.path.join("frontend", "dist", dst_subpath))
         )
+
+    # Copy files
+    for src_path, dst_path in filepaths_to_copy:
+        safe_copy_file(src_path, os.path.join(addon_output_dir, dst_path))
+
+def copy_server_content(addon_output_dir: str, log: logging.Logger):
+    log.info("Copying server content")
+
+    filepaths_to_copy: list[tuple[str, str]] = []
 
     server_dirpath: str = os.path.join(CURRENT_DIR, "server")
     for item in find_files_in_subdir(server_dirpath):
@@ -244,6 +263,17 @@ def copy_server_content(addon_output_dir: str, log: logging.Logger):
     # Copy files
     for src_path, dst_path in filepaths_to_copy:
         safe_copy_file(src_path, os.path.join(addon_output_dir, dst_path))
+
+def copy_package_content(addon_output_dir: str, log: logging.Logger):
+    """Copies server side folders to 'addon_package_dir'
+
+    Args:
+        addon_output_dir (str): Output directory path.
+        log (logging.Logger)
+    """
+
+    copy_frontend_content(addon_output_dir, log)
+    copy_server_content(addon_output_dir, log)
 
 
 def _get_client_zip_content(log: logging.Logger):
@@ -421,7 +451,7 @@ def main(
 
     failed = True
     try:
-        copy_server_content(addon_output_dir, log)
+        copy_package_content(addon_output_dir, log)
 
         zip_client_side(addon_output_dir, log)
         failed = False
