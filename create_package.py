@@ -369,7 +369,7 @@ def copy_client_code(output_dir: str, log: logging.Logger):
         shutil.copy2(src_path, full_dst_path)
 
 
-def get_output_dir(output_dir: str) -> str:
+def get_output_dir(output_dir: Optional[str]) -> str:
     if output_dir:
         return output_dir
     return os.path.join(CURRENT_DIR, "package")
@@ -382,7 +382,7 @@ def get_addon_output_root(output_dir: Optional[str] = None) -> str:
 
 
 def main(
-    output_dir: Optional[str] = None,
+    output_dir: str,
     skip_zip: Optional[bool] = False,
     keep_sources: Optional[bool] = False,
     only_client: Optional[bool] = False,
