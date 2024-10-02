@@ -30,6 +30,7 @@ import platform
 import argparse
 import logging
 import collections
+import json
 import zipfile
 import subprocess
 from typing import Optional, Iterable, Pattern, Union, List, Tuple
@@ -231,6 +232,37 @@ def update_client_version(logger):
         stream.write(VERSION_PY_CONTENT)
 
 
+def update_frontend_version(log):
+    log.info("Updating frontend version")
+    for filepath in (
+        os.path.join(FRONTEND_ROOT, "package-lock.json"),
+        os.path.join(FRONTEND_ROOT, "package.json"),
+    ):
+        with open(filepath, "r") as stream:
+            data = json.load(stream)
+
+        data["version"] = ADDON_VERSION
+
+        content = json.dumps(data, indent=2)
+        content.rstrip("\n")
+        with open(filepath, "w") as stream:
+            stream.write(content + "\n")
+
+    common_file = os.path.join(FRONTEND_ROOT, "src", "common.js")
+    with open(common_file, "r") as stream:
+        common_lines = stream.readlines()
+
+    new_lines = []
+    for line in common_lines:
+        if "addonVersion" in line:
+            head, tail = line.split("addonVersion:")
+            line = f"{head}addonVersion: '{ADDON_VERSION}',\n"
+        new_lines.append(line)
+
+    with open(common_file, "w") as stream:
+        stream.write("".join(new_lines))
+
+
 def build_frontend(log):
     if not os.path.exists(FRONTEND_ROOT):
         log.info("Frontend directory was not found. Skipping")
@@ -239,8 +271,8 @@ def build_frontend(log):
     # if package.json exists, we assume that frontend is a node project
     # and we need to build it
     if os.path.exists(os.path.join(FRONTEND_ROOT, "package.json")):
-        # This logic does not make sense, 'yarn' can be available only if
-        # 'npm' is available so 'yarn' will never be used
+        # This logic is not very relevant, 'yarn' can be available only if
+        # 'npm' is available so 'yarn' will never be used (or?)
         npm_executable = shutil.which("npm")
         yarn_executable = _get_yarn_executable()
         if npm_executable:
@@ -448,6 +480,8 @@ def main(
                 " Please check 'client_dir' in 'package.py'."
             )
         update_client_version(log)
+
+    update_frontend_version(log)
 
     if only_client:
         if not has_client_code:
