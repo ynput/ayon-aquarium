@@ -1,9 +1,7 @@
-import requests
-
 from qtpy import QtCore, QtGui, QtWidgets
 
-from openpype import style, resources
-from openpype.tools.utils import PlaceholderLineEdit
+from ayon_core import style, resources
+from ayon_core.tools.utils import PlaceholderLineEdit
 
 from .credentials import signin, me, load_credentials, save_credentials, clear_credentials, set_credentials_envs
 
@@ -15,12 +13,12 @@ class AquariumCredentialsDialog(QtWidgets.QDialog):
     login_changed = QtCore.Signal()
     logout_signal = QtCore.Signal()
 
-    def __init__(self, module, parent=None):
-        super(AquariumCredentialsDialog, self).__init__(parent)
+    def __init__(self, addon, parent=None):
+        super().__init__(parent)
 
         self.setWindowTitle("AYON - Aquarium Login")
 
-        icon = QtGui.QIcon(resources.get_openpype_icon_filepath())
+        icon = QtGui.QIcon(resources.get_ayon_icon_filepath())
         self.setWindowIcon(icon)
 
         self.setWindowFlags(
@@ -28,7 +26,7 @@ class AquariumCredentialsDialog(QtWidgets.QDialog):
             | QtCore.Qt.WindowMinimizeButtonHint
         )
 
-        self._module = module
+        self._addon = addon
 
         self._is_logged = False
         self._validated_url = None
@@ -230,7 +228,7 @@ class AquariumCredentialsDialog(QtWidgets.QDialog):
             self.set_is_logged(is_logged)
 
     def _get_validated_url(self):
-        server_url = self._module.get_aquarium_url()
+        server_url = self._addon.get_aquarium_url()
         if not server_url:
             self._set_error(
                 "Aquarium URL is not defined in settings!"

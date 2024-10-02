@@ -301,7 +301,7 @@ class Aquarium(object):
         :param      name:   The name of the new user
         :type       name:   string, optional
         :param      aquarium_url: The Aquarium Studio interface url. Useful if API url is not the same as Aquarium Studio interface.
-        :type       aquarium_url: string, optional (default is api_url used during module initialisation)
+        :type       aquarium_url: string, optional (default is api_url used during addon initialisation)
 
         :returns:   User object
         :rtype:     :class:`~aquarium.items.user.User`
@@ -329,7 +329,7 @@ class Aquarium(object):
         :param      email:        Email of the user who forgot its password
         :type       email:        string
         :param      aquarium_url: The Aquarium Studio interface url. Useful if API url is not the same as Aquarium Studio interface.
-        :type       aquarium_url: string, optional (default is api_url used during module initialisation)
+        :type       aquarium_url: string, optional (default is api_url used during addon initialisation)
 
         :returns: True or False
         :rtype: boolean

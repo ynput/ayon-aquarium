@@ -7,7 +7,7 @@ Provides:
 """
 import pyblish.api
 
-from openpype.lib import filter_profiles
+from ayon_core.lib import filter_profiles
 
 from ayon_aquarium.pipeline import plugin
 

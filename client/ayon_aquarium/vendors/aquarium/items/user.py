@@ -213,7 +213,7 @@ class User(Item):
         Start forgot password procedure. User will receive an email to reset its password.
 
         :param      aquarium_url: The Aquarium Studio interface url. Useful if API url is not the same as Aquarium Studio interface.
-        :type       aquarium_url: string, optional (default is api_url used during module initialisation)
+        :type       aquarium_url: string, optional (default is api_url used during addon initialisation)
 
         :returns: True or False
         :rtype: boolean

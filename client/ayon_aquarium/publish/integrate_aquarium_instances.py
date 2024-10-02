@@ -1,16 +1,4 @@
-import os
-import json
-import copy
 import pyblish.api
-
-from openpype.pipeline.publish import get_publish_repre_path
-from openpype.lib.openpype_version import get_openpype_version
-from openpype.lib.transcoding import (
-    get_ffprobe_streams,
-    convert_ffprobe_fps_to_float,
-)
-from openpype.lib.profiles_filtering import filter_profiles
-from openpype.lib.transcoding import VIDEO_EXTENSIONS
 
 from ayon_aquarium.pipeline import plugin
 

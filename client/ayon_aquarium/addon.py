@@ -1,12 +1,14 @@
-"""Aquarium module."""
+"""Aquarium addon."""
 
-import os, sys
+import os
+import sys
 
-from openpype.modules import (
+from ayon_core.addon import (
     AYONAddon,
     IPluginPaths,
     ITrayAction,
 )
+from .version import __version__
 
 AQUARIUM_ADDON_DIR = os.path.dirname(os.path.abspath(__file__))
 vendorsPath = os.path.join(AQUARIUM_ADDON_DIR, "vendors")
@@ -14,10 +16,11 @@ if vendorsPath not in sys.path:
     sys.path.append(vendorsPath)
 
 class AquariumAddon(AYONAddon, IPluginPaths, ITrayAction):
-    """Aquarium module class."""
+    """Aquarium addon class."""
 
     label = "Aquarium"
     name = "aquarium"
+    version = __version__
 
     def initialize(self, settings):
         aquarium_settings = settings[self.name]
@@ -25,7 +28,6 @@ class AquariumAddon(AYONAddon, IPluginPaths, ITrayAction):
         self._url = aquarium_settings["url"].strip()
         self._domain = aquarium_settings["domain"].strip()
 
-        self.enabled = True
         self._dialog = None
 
     def get_global_environments(self):

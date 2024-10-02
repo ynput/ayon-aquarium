@@ -2,12 +2,8 @@ import webbrowser
 import ayon_api
 
 from urllib.parse import urlencode, urljoin
-try:
-    from openpype.pipeline import LauncherAction
-    from openpype.modules import ModulesManager
-except ImportError:
-    from ayon_core.pipeline import LauncherAction
-    from ayon_core.modules import ModulesManager
+from ayon_core.pipeline import LauncherAction
+from ayon_core.addon import AddonsManager
 
 
 class ShowInAquarium(LauncherAction):
@@ -19,57 +15,48 @@ class ShowInAquarium(LauncherAction):
     order = 10
 
     @staticmethod
-    def get_aquarium_module():
-        print('GET AQUARIUM MODULE')
-        return ModulesManager().modules_by_name.get("aquarium")
+    def get_aquarium_addon():
+        print('GET AQUARIUM ADDON')
+        return AddonsManager().get("aquarium")
 
-    def is_compatible(self, session):
-        print(session)
-        if not session.get("AVALON_PROJECT"):
-            return False
-        return True
+    def is_compatible(self, selection):
+        return selection.is_task_selected
 
-    def process(self, session, **kwargs):
-        # Context inputs
-        print(session)
-        project_name = session["AVALON_PROJECT"]
-        asset_name = session.get("AVALON_ASSET", None)
-        task_name = session.get("AVALON_TASK", None)
-
-        project = ayon_api.get_project(project_name)
-        if not project:
-            raise RuntimeError("Project {} not found.".format(project_name))
-
+    def process(self, selection, **kwargs):
+        project_name = selection.get_project_name()
+        project = selection.get_project_entity()
         project_aquarium_key = project["data"].get("aquariumProjectKey", None)
         if not project_aquarium_key:
             raise RuntimeError(
-                "Project {} has no paired with an Aquarium project.".format(project_name)
+                f"Project {project_name} has no paired with"
+                " an Aquarium project."
             )
 
         # https://fatfishlab.aquarium.app/open/1234
         # http://localhost:3000/apps/asseteditor?itemKeys=252552&mediaIndex=1&historyIndex=1&tabName=viewer&taskName=Me&versionIndex=1
-        entity = ayon_api.get_folder_by_name(project_name, asset_name)
-        if not entity:
-            raise RuntimeError("Entity {} not found.".format(asset_name))
+        folder_entity = selection.get_folder_entity()
+        task_entity = selection.get_task_entity()
 
+        folder_path = folder_entity["path"]
         # Get Aquarium item._key
-        itemKey = entity["data"].get("aquariumKey", None)
+        itemKey = folder_entity["data"].get("aquariumKey", None)
         if not itemKey:
-            raise RuntimeError("Entity {} has no paired with an Aquarium item.".format(asset_name))
+            raise RuntimeError(
+                f"Folder {folder_path} has no paired with an Aquarium item."
+            )
 
         # Get Aquarium task._key
-        task = ayon_api.get_task_by_name(project_name, entity["_id"], task_name)
-        if not task:
-            raise RuntimeError("Task {} not found.".format(task_name))
-
-        taskKey = task["data"].get("aquariumKey", None)
+        taskKey = task_entity["data"].get("aquariumKey", None)
         if not taskKey:
-            raise RuntimeError("Task {} has no paired with an Aquarium task.".format(task_name))
+            raise RuntimeError(
+                f"Task {folder_path}/{task_entity['name']} has"
+                " no paired with an Aquarium task."
+            )
 
         appName = None
-        if entity["type"] in ["Episode", "Sequence", "Shot"]:
+        if folder_entity["folderType"] in ["Episode", "Sequence", "Shot"]:
             appName = "shoteditor"
-        elif entity["type"] in ["Library", "Asset"]:
+        elif folder_entity["folderType"] in ["Library", "Asset"]:
             appName = "asseteditor"
 
         # Define URL
@@ -98,7 +85,7 @@ class ShowInAquarium(LauncherAction):
         *args,
         **kwargs,
     ):
-        aq = self.get_aquarium_module()
+        aq = self.get_aquarium_addon()
 
         # Get aquarium url with /api stripped
         aquarium_url = aq.api_url
@@ -111,7 +98,7 @@ class ShowInAquarium(LauncherAction):
         self,
         itemKey
     ):
-        aq = self.get_aquarium_module()
+        aq = self.get_aquarium_addon()
 
         # Get aquarium url with /api stripped
         aquarium_url = aq.api_url
