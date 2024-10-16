@@ -18,3 +18,4 @@ class IntegrateAquariumInstance(plugin.AquariumPublishInstancePlugin):
         # TODO implement
         #  Integrate review and maybe other components to aquarium
         #  - I don't know capabalities of aquarium
+        pass
