@@ -1,7 +1,7 @@
 # Aquarium addon
 
 <p align="center">
-  <img src="server/frontend/public/aquarium-ayon.png" alt="Aquarium addon for Ayon" height="200">
+  <img src="frontend/public/aquarium-ayon.png" alt="Aquarium addon for Ayon" height="200">
 </p>
 
 > [!NOTE]

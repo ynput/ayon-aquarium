@@ -1,5 +1,5 @@
 export default {
   addonName: 'aquarium',
-  addonVersion: null,
+  addonVersion: '0.0.4',
   baseUrl: null,
 }

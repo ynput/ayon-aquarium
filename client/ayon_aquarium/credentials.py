@@ -1,11 +1,10 @@
 """Aquarium credentials functions."""
 
 import os
-from typing import Tuple, Optional
+from typing import Optional
 from .vendors.aquarium import Aquarium
 
-from openpype.lib.local_settings import OpenPypeSecureRegistry
-from openpype.lib import emit_event
+from ayon_core.lib import AYONSecureRegistry
 
 def me(
     token: str, url: Optional[str] = None, domain: Optional[str] = None
@@ -107,7 +106,7 @@ def clear_credentials():
         return
 
     # Get user registry
-    user_registry = OpenPypeSecureRegistry("aquarium_user")
+    user_registry = AYONSecureRegistry("aquarium_user")
 
     # Set local settings
     if token is not None:
@@ -121,7 +120,7 @@ def save_credentials(token: str):
         token (str): Aquarium user token
     """
     # Get user registry
-    user_registry = OpenPypeSecureRegistry("aquarium_user")
+    user_registry = AYONSecureRegistry("aquarium_user")
 
     # Set local settings
     user_registry.set_item("token", token)
@@ -134,7 +133,7 @@ def load_credentials() -> str:
         str: (Token)
     """
     # Get user registry
-    user_registry = OpenPypeSecureRegistry("aquarium_user")
+    user_registry = AYONSecureRegistry("aquarium_user")
 
     return user_registry.get_item("token", None)
 
