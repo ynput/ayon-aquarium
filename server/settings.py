@@ -1,7 +1,8 @@
 
-from pydantic import Field
-
-from ayon_server.settings import BaseSettingsModel
+from ayon_server.settings import (
+    BaseSettingsModel,
+    SettingsField
+)
 from ayon_server.settings.enum import secrets_enum
 from ayon_server.settings.anatomy.statuses import State
 
@@ -15,14 +16,14 @@ class AquariumServiceSettings(BaseSettingsModel):
     so you can see which changes happened from service.
     """
 
-    bot_key: str = Field(
+    bot_key: str = SettingsField(
         '',
         placeholder="Select your bot key from Ayon secrets",
         enum_resolver=secrets_enum,
         title="Bot key",
         description="Enter your Aquarium bot key",
     )
-    bot_secret: str = Field(
+    bot_secret: str = SettingsField(
         '',
         placeholder="Select your bot secret from Ayon secrets",
         enum_resolver=secrets_enum,
@@ -32,9 +33,9 @@ class AquariumServiceSettings(BaseSettingsModel):
 
 class TaskCondition(BaseSettingsModel):
     _layout: str = "compact"
-    name: str = Field("", title="Name")
-    short_name: str = Field("", title="Short name")
-    icon: str = Field("task_alt", title="Icon", widget="icon")
+    name: str = SettingsField("", title="Name")
+    short_name: str = SettingsField("", title="Short name")
+    icon: str = SettingsField("task_alt", title="Icon", widget="icon")
 
 def _states_enum():
     return [
@@ -46,14 +47,14 @@ def _states_enum():
 
 class StatusCondition(BaseSettingsModel):
     _layout: str = "compact"
-    short_name: str = Field("", title="Short name")
-    state: State = Field("in_progress", enum_resolver=_states_enum, title="State")
-    icon: str = Field("task_alt", title="Icon", widget="icon")
+    short_name: str = SettingsField("", title="Short name")
+    state: State = SettingsField("in_progress", enum_resolver=_states_enum, title="State")
+    icon: str = SettingsField("task_alt", title="Icon", widget="icon")
 
 
 class DefaultSyncInfo(BaseSettingsModel):
-    tasks: list[TaskCondition] = Field(default_factory=list, title="Tasks")
-    status: list[StatusCondition] = Field(
+    tasks: list[TaskCondition] = SettingsField(default_factory=list, title="Tasks")
+    status: list[StatusCondition] = SettingsField(
         default_factory=list, title="Statuses"
     )
 
@@ -64,7 +65,7 @@ class SyncSettings(BaseSettingsModel):
     Defines default sync info for tasks and statuses
     """
 
-    default: DefaultSyncInfo = Field(
+    default: DefaultSyncInfo = SettingsField(
         default_factory=DefaultSyncInfo,
         title="Default sync info",
     )
@@ -75,26 +76,26 @@ class AquariumSettings(BaseSettingsModel):
     Aquarium addon settings
     Defines Aquarium URL and service settings
     """
-    url: str = Field(
+    url: str = SettingsField(
         "",
         placeholder="https://studio.aquarium.app",
         title="Aquarium URL",
         description="Enter your Aquarium URL",
     )
 
-    domain: str | None = Field(
+    domain: str | None = SettingsField(
         None,
         placeholder="",
         title="Aquarium domain [optional]",
         description="Specify the domain used for unauthenticated requests. Mainly for Aquarium Fatfish Lab dev or local Aquarium server without DNS",
     )
 
-    services: AquariumServiceSettings = Field(
+    services: AquariumServiceSettings = SettingsField(
         default_factory=AquariumServiceSettings, # type: ignore
         title="Service settings",
     )
 
-    sync: SyncSettings = Field(
+    sync: SyncSettings = SettingsField(
         default_factory=SyncSettings,
         title="Sync settings",
     )
