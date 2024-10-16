@@ -83,8 +83,8 @@ class AquariumSettings(BaseSettingsModel):
         description="Enter your Aquarium URL",
     )
 
-    domain: str | None = SettingsField(
-        None,
+    domain: str = SettingsField(
+        "",
         placeholder="",
         title="Aquarium domain [optional]",
         description="Specify the domain used for unauthenticated requests. Mainly for Aquarium Fatfish Lab dev or local Aquarium server without DNS",
